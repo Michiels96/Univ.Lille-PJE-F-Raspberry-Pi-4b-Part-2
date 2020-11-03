@@ -1,155 +1,124 @@
-# coding: utf-8 
+# coding: utf-8
 
 import socket
-import threading
-import os
 
-errorArray = {
-    '001': 'choix invalide!', 
-    '002': 'Le client n\'a pas confirmé la réception du paquet venant du serveur!'
-    }
 
-class ClientThread(threading.Thread):
+## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
+## ceci permet d'avoir une architecture synchrone 
+OkCode = "000"
+#booléen pour savoir si un fichier a déjà été ouvert par le client
+fileAlreadyOpen = False
 
-    def __init__(self, ip, port, clientsocket):
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("127.0.0.1", 8080))
 
-        threading.Thread.__init__(self)
-        self.ip = ip
-        self.port = port
-        self.clientsocket = clientsocket
-        print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
-
-    def menu(self):
-        choix = ""
-        while choix != "q":
-            option1 = "1) 'open <filename>' pour ouvrir un fichier passé en paramètre en lecture"
-            option2 = "2) 'read <size>' pour lire le fichier ouvert précédemment \n\t(Uniquement si un fichier a été ouvert précédemment)"
-            option3 = "3) 'close' pour fermer un fichier \n\t(Uniquement si un fichier a été ouvert précédemment)"
-            option4 = "4) 'list' pour afficher l'arborescence des fichiers"
-            option5 = "5) 'stat <filename>' pour afficher les propriétés du fichier passé en paramètre"
-            optionQuit = "'q' pour se déconnecter"
-            display = option1+"\n"+option2+"\n"+option3+"\n"+option4+"\n"+option5+"\n"+optionQuit+"\n"
-            #print(display)
-
-            # conversion en bytes pour l'envoi vers le client
-            # paquet = bytes(display, 'utf-8')
-            # self.clientsocket.sendall(paquet)
-            self.clientsocket.sendall(display.encode('utf-8'))
-            
-            choix = (self.clientsocket.recv(1024)).decode('utf-8')
-            print("RECU du client --> ", choix)
-
-            #switch inexistant en Python
-            if choix == '1':
-                display = "Ok1"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
-                self.openCommand()
-            elif choix == '2':
-                display = "Ok2"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
-                self.readCommand()
-            elif choix == '3':
-                display = "Ok3"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
-                self.closeCommand()
-            elif choix == '4':
-                display = "Ok4"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
-                self.listCommand()
-            elif choix == '5':
-                display = "Ok5"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
-                self.statCommand()
-            elif choix == 'q':
-                display = "Okq"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
+def openCommandResponse():
+    readyForSendingFilename = (s.recv(1024)).decode('utf-8')
+    if readyForSendingFilename != "OkFilename":
+        print("Serveur n'est pas prêt à recevoir filename")
+    fileName = ''
+    while True:
+        try:
+            print("Introduisez le nom du fichier à ouvrir: ")
+            fileName = input()
+            if fileName == '':
+                raise ValueError
             else:
-                display = "CODE ERREUR Nr 001: "+errorArray['001']
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("CODE ERREUR Nr 002: "+errorArray['002'])
-                    break
+                break
+        except:
+            print("Erreur, saisie incorrecte!")
+            continue
 
-    def openCommand(self):
-        print("hello from openCommand()")
+    s.sendall(fileName.encode())
+    fileExists = (s.recv(1024)).decode('utf-8')
+    if fileExists == "noFile":
+        print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n\n")
+        s.sendall(OkCode.encode())
+    else:
+        fileAlreadyOpen = True
+        print("Fichier '",fileName,"' ouvert!")
+        print("la bas",fileAlreadyOpen)
+        s.sendall(OkCode.encode())
 
-    def readCommand(self):
-        print("hello from readCommand()")
+def readCommandResponse():
+    return
 
-    def closeCommand(self):
-        print("hello from closeCommand()")
+def closeCommandResponse():
+    return
 
-    def listCommand(self):
-        print("hello from listCommand()")
-        videoListDisplay = ""
-        #l'emplacement suivant est à exécuter sur un raspberry pi
-        #for f in os.listdir("/media/usb0/record/"):
-        for f in os.listdir("/root/record_sample/"):
-            if not f.startswith('.'):
-                videoListDisplay += (f+"\n")
-        videoListDisplay += "\n"
-        self.clientsocket.sendall(videoListDisplay.encode('utf-8'))
-        #vérifier que le client à bien terminé 
-        OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-        if OkCode != "000":
-            #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
-            print("CODE ERREUR Nr 002: "+errorArray['002'])
-        
-    def statCommand(self):
-        print("hello from statCommand()")
+def listCommandResponse():
+    print("Liste de tous les fichiers dans le répertoire:")
+    display = (s.recv(1024)).decode('utf-8')
+    print(display)
+    s.sendall(OkCode.encode())
 
-    def run(self):
-        print("Connexion de %s %s" % (self.ip, self.port, ))
+def statCommandResponse():
+    return
 
-        self.menu()
 
-        # r = self.clientsocket.recv(2048)
-        # print("%s"%r)
-        # # envois de fichier
-        # print("Ouverture du fichier: ", r, "...")
-        # fp = open(r, 'rb')
-        # self.clientsocket.send(fp.read())
 
-        print("Client déconnecté...")
 
+#reception du menu
+choix = ''
+while choix != "q":
+    
+    menu = s.recv(1024)
+    print(menu.decode())
+
+    while True:
+        try:
+            print("choisissez: ")
+            choix = input()
+            if choix == '':
+                raise ValueError
+            else:
+                break
+        except:
+            print("Erreur, saisie incorrecte!")
+            continue
+            
+    #envois de la reponse
+    s.sendall(choix.encode())
+    #reception de l'action demandée
+    paquet = s.recv(1024)
+    serverResponse = paquet.decode()
+    #print("Recu -->", serverResponse, "\n")
+
+    if serverResponse == "Ok1":
+        print("Ici ", fileAlreadyOpen)
+        if fileAlreadyOpen == True:
+            print("Erreur, vous avez déjà ouvert un fichier")
+            fileAlreadyOpened = "clientAlreadyOpenedAnotherFile"
+            s.sendall(fileAlreadyOpened.encode())
+        else:
+            s.sendall(OkCode.encode())
+        openCommandResponse()
+    elif serverResponse == "Ok2":
+        s.sendall(OkCode.encode())
+    elif serverResponse == "Ok3":
+        s.sendall(OkCode.encode())
+    elif serverResponse == "Ok4":
+        s.sendall(OkCode.encode())
+        listCommandResponse()
+    elif serverResponse == "Ok5":
+        s.sendall(OkCode.encode())
+    elif serverResponse == "Okq":
+        s.sendall(OkCode.encode())
+        break
+    else:
+        #erreur reçue du serveur
+        print(serverResponse)
+        s.sendall(OkCode.encode())
     
 
 
+# print("Le nom du fichier que vous voulez récupérer:")
+# file_name = input(">> ") # utilisez raw_input() pour les anciennes versions python
+# s.send(file_name.encode())
+# file_name = 'data/%s' % (file_name,)
 
-
-tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-# "" pour l'HOST permet de recevoir une connexion de n'importe quelle addr IP
-tcpsock.bind(("",8080))
-
-while True:
-    tcpsock.listen(10)
-    print( "En écoute...")
-    (clientsocket, (ip, port)) = tcpsock.accept()
-    newthread = ClientThread(ip, port, clientsocket)
-    newthread.start()
+# #reception de fichier
+# r = s.recv(9999999)
+# with open(file_name,'wb') as _file:
+#     _file.write(r)
+# print("Le fichier a été correctement copié dans : %s." % file_name)

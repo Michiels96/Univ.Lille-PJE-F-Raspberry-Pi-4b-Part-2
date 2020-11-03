@@ -6,17 +6,45 @@ import socket
 ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
 ## ceci permet d'avoir une architecture synchrone 
 OkCode = "000"
+#booléen pour savoir si un fichier a déjà été ouvert par le client
+fileAlreadyOpen = False
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("127.0.0.1", 8080))
 
 def openCommandResponse():
-    print("Im in openCommandResponse()")
+    readyForSendingFilename = (s.recv(1024)).decode('utf-8')
+    if readyForSendingFilename != "OkFilename":
+        print("Serveur n'est pas prêt à recevoir filename")
+    fileName = ''
+    while True:
+        try:
+            print("Introduisez le nom du fichier à ouvrir: ")
+            fileName = input()
+            if fileName == '':
+                raise ValueError
+            else:
+                break
+        except:
+            print("Erreur, saisie incorrecte!")
+            continue
+
+    s.sendall(fileName.encode())
+    fileExists = (s.recv(1024)).decode('utf-8')
+    if fileExists == "noFile":
+        print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n\n")
+        s.sendall(OkCode.encode())
+    else:
+        fileAlreadyOpen = True
+        print("Fichier '",fileName,"' ouvert!")
+        print("la bas",fileAlreadyOpen)
+        s.sendall(OkCode.encode())
 
 def readCommandResponse():
-    abc = ''
+    return
 
 def closeCommandResponse():
-    abc = ''
+    return
 
 def listCommandResponse():
     print("Liste de tous les fichiers dans le répertoire:")
@@ -25,7 +53,7 @@ def listCommandResponse():
     s.sendall(OkCode.encode())
 
 def statCommandResponse():
-    abc = ''
+    return
 
 
 
@@ -54,10 +82,16 @@ while choix != "q":
     #reception de l'action demandée
     paquet = s.recv(1024)
     serverResponse = paquet.decode()
-    print("Recu -->", serverResponse, "\n")
+    #print("Recu -->", serverResponse, "\n")
 
     if serverResponse == "Ok1":
-        s.sendall(OkCode.encode())
+        print("Ici ", fileAlreadyOpen)
+        if fileAlreadyOpen == True:
+            print("Erreur, vous avez déjà ouvert un fichier")
+            fileAlreadyOpened = "clientAlreadyOpenedAnotherFile"
+            s.sendall(fileAlreadyOpened.encode())
+        else:
+            s.sendall(OkCode.encode())
         openCommandResponse()
     elif serverResponse == "Ok2":
         s.sendall(OkCode.encode())
