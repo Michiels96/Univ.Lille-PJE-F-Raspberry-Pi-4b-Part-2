@@ -3,6 +3,7 @@
 import socket
 import threading
 import time
+import os
 
 class ClientThread(threading.Thread):
 
@@ -36,27 +37,57 @@ class ClientThread(threading.Thread):
             choix = (self.clientsocket.recv(1024)).decode('utf-8')
             print("RECU du client --> ", choix)
 
+            #switch inexistant en Python
             if choix == '1':
+                self.openCommand()
                 display = "choix 1"
                 self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '2':
+                self.readCommand()
                 display = "choix 2"
                 self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '3':
+                self.closeCommand()
                 display = "choix 3"
                 self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '4':
+                self.listCommand()
                 display = "choix 4"
                 self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '5':
+                self.statCommand()
                 display = "choix 5"
                 self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == 'q':
-                display = "choix Q"
+                display = "choix q"
                 self.clientsocket.sendall(display.encode('utf-8'))
             else:
                 display = "pas compris, recommencez!"
                 self.clientsocket.sendall(display.encode('utf-8'))
+
+    def openCommand(self):
+        print("hello from openCommand()")
+
+    def readCommand(self):
+        print("hello from readCommand()")
+
+    def closeCommand(self):
+        print("hello from closeCommand()")
+
+    def listCommand(self):
+        print("hello from listCommand()")
+        videoList = []
+        #l'emplacement suivant est a exécuter sur un raspberry pi
+        #for f in os.listdir("/media/usb0/record/"):
+        for f in os.listdir("/root/record_sample/"):
+            if not f.startswith('.'):
+                videoList.append(f)
+        print(videoList)
+        dates = []
+
+
+    def statCommand(self):
+        print("hello from statCommand()")
 
     def run(self):
         print("Connexion de %s %s" % (self.ip, self.port, ))
