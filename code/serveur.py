@@ -2,8 +2,12 @@
 
 import socket
 import threading
-import time
 import os
+
+errorArray = {
+    '001': 'choix invalide!', 
+    '002': 'Le client n\'a pas confirmé la réception du paquet venant du serveur!'
+    }
 
 class ClientThread(threading.Thread):
 
@@ -18,8 +22,6 @@ class ClientThread(threading.Thread):
     def menu(self):
         choix = ""
         while choix != "q":
-            #obligé d'attendre une microseconde sinon la synchronisation ne peut se faire entre le serveur et le client
-            time.sleep(0.01)
             option1 = "1) 'open <filename>' pour ouvrir un fichier passé en paramètre en lecture"
             option2 = "2) 'read <size>' pour lire le fichier ouvert précédemment \n\t(Uniquement si un fichier a été ouvert précédemment)"
             option3 = "3) 'close' pour fermer un fichier \n\t(Uniquement si un fichier a été ouvert précédemment)"
@@ -39,31 +41,59 @@ class ClientThread(threading.Thread):
 
             #switch inexistant en Python
             if choix == '1':
+                display = "Ok1"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
                 self.openCommand()
-                display = "choix 1"
-                self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '2':
+                display = "Ok2"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
                 self.readCommand()
-                display = "choix 2"
-                self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '3':
+                display = "Ok3"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
                 self.closeCommand()
-                display = "choix 3"
-                self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '4':
+                display = "Ok4"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
                 self.listCommand()
-                display = "choix 4"
-                self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == '5':
+                display = "Ok5"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
                 self.statCommand()
-                display = "choix 5"
-                self.clientsocket.sendall(display.encode('utf-8'))
             elif choix == 'q':
-                display = "choix q"
+                display = "Okq"
                 self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
             else:
-                display = "pas compris, recommencez!"
+                display = "CODE ERREUR Nr 001: "+errorArray['001']
                 self.clientsocket.sendall(display.encode('utf-8'))
+                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                if OkCode != "000":
+                    print("CODE ERREUR Nr 002: "+errorArray['002'])
+                    break
 
     def openCommand(self):
         print("hello from openCommand()")
@@ -76,16 +106,20 @@ class ClientThread(threading.Thread):
 
     def listCommand(self):
         print("hello from listCommand()")
-        videoList = []
-        #l'emplacement suivant est a exécuter sur un raspberry pi
+        videoListDisplay = ""
+        #l'emplacement suivant est à exécuter sur un raspberry pi
         #for f in os.listdir("/media/usb0/record/"):
         for f in os.listdir("/root/record_sample/"):
             if not f.startswith('.'):
-                videoList.append(f)
-        print(videoList)
-        dates = []
-
-
+                videoListDisplay += (f+"\n")
+        videoListDisplay += "\n"
+        self.clientsocket.sendall(videoListDisplay.encode('utf-8'))
+        #vérifier que le client à bien terminé 
+        OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+        if OkCode != "000":
+            #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
+            print("CODE ERREUR Nr 002: "+errorArray['002'])
+        
     def statCommand(self):
         print("hello from statCommand()")
 
