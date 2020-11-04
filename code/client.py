@@ -36,9 +36,9 @@ def openCommandResponse():
         print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n\n")
         s.sendall(OkCode.encode())
     else:
+        global fileAlreadyOpen
         fileAlreadyOpen = True
-        print("Fichier '",fileName,"' ouvert!")
-        print("la bas",fileAlreadyOpen)
+        print("\tFichier '",fileName,"' ouvert!\n")
         s.sendall(OkCode.encode())
 
 def readCommandResponse():
@@ -62,7 +62,6 @@ def statCommandResponse():
 #reception du menu
 choix = ''
 while choix != "q":
-    print("Ici ", fileAlreadyOpen)
     menu = s.recv(1024)
     print(menu.decode())
 
@@ -86,14 +85,13 @@ while choix != "q":
     #print("Recu -->", serverResponse, "\n")
 
     if serverResponse == "Ok1":
-        
         if fileAlreadyOpen == True:
-            print("Erreur, vous avez déjà ouvert un fichier")
+            print("\tErreur, vous avez déjà ouvert un fichier\n")
             fileAlreadyOpened = "clientAlreadyOpenedAnotherFile"
             s.sendall(fileAlreadyOpened.encode())
         else:
             s.sendall(OkCode.encode())
-        openCommandResponse()
+            openCommandResponse()
     elif serverResponse == "Ok2":
         s.sendall(OkCode.encode())
     elif serverResponse == "Ok3":

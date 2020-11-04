@@ -53,11 +53,11 @@ class ClientThread(threading.Thread):
                 OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
                 if OkCode == "clientAlreadyOpenedAnotherFile":
                     print("Commande 'open' annulée, le client à déjà ouvert un autre fichier")
-                    break
-                if OkCode != "000":
+                elif OkCode != "000":
                     print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                     break
-                self.openCommand()
+                else:
+                    self.openCommand()
             elif choix == '2':
                 display = "Ok2"
                 self.clientsocket.sendall(display.encode('utf-8'))
@@ -169,10 +169,6 @@ class ClientThread(threading.Thread):
         # self.clientsocket.send(fp.read())
 
         print("Client déconnecté...")
-
-    
-
-
 
 
 tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
