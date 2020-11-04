@@ -6,8 +6,7 @@ import socket
 ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
 ## ceci permet d'avoir une architecture synchrone 
 OkCode = "000"
-#booléen pour savoir si un fichier a déjà été ouvert par le client
-fileAlreadyOpen = False
+
 fileNameSaved = ''
 # path à utiliser pour le raspberry pi 
 #VIDEO_PATH = "/media/usb0/record/"
@@ -19,7 +18,7 @@ s.connect(("127.0.0.1", 8080))
 def openCommandResponse():
     readyForSendingFilename = (s.recv(1024)).decode('utf-8')
     if readyForSendingFilename != "OkFilename":
-        print("Serveur n'est pas prêt à recevoir filename")
+        print("\tServeur n'est pas prêt à recevoir filename\n")
         return
     fileName = ''
     while True:
@@ -34,23 +33,21 @@ def openCommandResponse():
             print("\tErreur, saisie incorrecte! recommencez")
             continue
 
-    s.sendall(fileName.encode())
+    s.sendall(fileName.encode('utf-8'))
     fileExists = (s.recv(1024)).decode('utf-8')
     if fileExists == "noFile":
-        print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n\n")
+        print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n")
         s.sendall(OkCode.encode())
     else:
-        global fileAlreadyOpen
-        fileAlreadyOpen = True
         global fileNameSaved
         fileNameSaved = fileName
-        print("\tFichier '",fileName,"' ouvert!\n")
+        print("\tFichier '",fileName,"' ouvert!\n\n")
         s.sendall(OkCode.encode())
 
 def readCommandResponse():
     readyForSendingSize = (s.recv(1024)).decode('utf-8')
     if readyForSendingSize != "OkSize":
-        print("Serveur n'est pas prêt à recevoir <size>")
+        print("\tServeur n'est pas prêt à recevoir <size>\n\n")
         return
     size = 0
     while True:
@@ -80,7 +77,16 @@ def readCommandResponse():
     print("\tFichier '", fileNameSaved,"' lu!\n\n")
 
 def closeCommandResponse():
-    return
+    fileClosed = (s.recv(1024)).decode('utf-8')
+    if fileClosed != "Ok":
+        print("\tServeur n'a pas su fermer le fichier '", fileNameSaved,"'\n")
+        return
+    else:
+        print("\tLe Fichier '", fileNameSaved,"' a correctement été fermé!\n\n")
+        # global fileNameSaved
+        # fileNameSaved = ''
+        s.sendall(OkCode.encode())
+
 
 def listCommandResponse():
     print("Liste de tous les fichiers dans le répertoire:")
@@ -120,23 +126,14 @@ while choix != "q":
     #print("Recu -->", serverResponse, "\n")
 
     if serverResponse == "Ok1":
-        if fileAlreadyOpen == True:
-            print("\tErreur, vous avez déjà ouvert un fichier\n")
-            fileAlreadyOpened = "clientAlreadyOpenedAnotherFile"
-            s.sendall(fileAlreadyOpened.encode())
-        else:
-            s.sendall(OkCode.encode())
-            openCommandResponse()
+        s.sendall(OkCode.encode())
+        openCommandResponse()
     elif serverResponse == "Ok2":
-        if fileAlreadyOpen == False:
-            print("\tErreur, vous n'avez pas encore ouvert de fichier\n")
-            fileAlreadyOpened = "clientHasntOpenedAFile"
-            s.sendall(fileAlreadyOpened.encode())
-        else:
-            s.sendall(OkCode.encode())
-            readCommandResponse()
+        s.sendall(OkCode.encode())
+        readCommandResponse()
     elif serverResponse == "Ok3":
         s.sendall(OkCode.encode())
+        closeCommandResponse()
     elif serverResponse == "Ok4":
         s.sendall(OkCode.encode())
         listCommandResponse()
@@ -147,7 +144,7 @@ while choix != "q":
         break
     else:
         #erreur reçue du serveur
-        print(serverResponse)
+        print(serverResponse,"\n")
         s.sendall(OkCode.encode())
     
 
