@@ -8,6 +8,10 @@ import socket
 OkCode = "000"
 #booléen pour savoir si un fichier a déjà été ouvert par le client
 fileAlreadyOpen = False
+fileNameSaved = ''
+# path à utiliser pour le raspberry pi 
+#VIDEO_PATH = "/media/usb0/record/"
+VIDEO_PATH = "/root/record_sample/"
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("127.0.0.1", 8080))
@@ -27,7 +31,7 @@ def openCommandResponse():
             else:
                 break
         except:
-            print("Erreur, saisie incorrecte!")
+            print("\tErreur, saisie incorrecte! recommencez")
             continue
 
     s.sendall(fileName.encode())
@@ -38,11 +42,42 @@ def openCommandResponse():
     else:
         global fileAlreadyOpen
         fileAlreadyOpen = True
+        global fileNameSaved
+        fileNameSaved = fileName
         print("\tFichier '",fileName,"' ouvert!\n")
         s.sendall(OkCode.encode())
 
 def readCommandResponse():
-    return
+    readyForSendingSize = (s.recv(1024)).decode('utf-8')
+    if readyForSendingSize != "OkSize":
+        print("Serveur n'est pas prêt à recevoir <size>")
+        return
+    size = 0
+    while True:
+        try:
+            print("Introduisez <size>:")
+            size = input()
+            size = int(size)
+            if size == '':
+                raise ValueError
+            elif size < 1:
+                print("Erreur, <size> trop petit")
+            else:
+                break
+        except:
+            print("\tErreur, saisie incorrecte! recommencez")
+            continue
+
+    s.sendall(str(size).encode())
+    #reçoit les N octets du fichier à lire
+    NOctetsALire = int((s.recv(1024)).decode('utf-8'))
+    s.sendall(OkCode.encode())
+    buffer = s.recv(NOctetsALire)
+    #ecrit les octets dans un fichier
+    with open(VIDEO_PATH+"copy-"+fileNameSaved, 'wb') as fileOpenedId:
+        fileOpenedId.write(buffer)
+    s.sendall(OkCode.encode())
+    print("\tFichier '", fileNameSaved,"' lu!\n\n")
 
 def closeCommandResponse():
     return
@@ -93,7 +128,13 @@ while choix != "q":
             s.sendall(OkCode.encode())
             openCommandResponse()
     elif serverResponse == "Ok2":
-        s.sendall(OkCode.encode())
+        if fileAlreadyOpen == False:
+            print("\tErreur, vous n'avez pas encore ouvert de fichier\n")
+            fileAlreadyOpened = "clientHasntOpenedAFile"
+            s.sendall(fileAlreadyOpened.encode())
+        else:
+            s.sendall(OkCode.encode())
+            readCommandResponse()
     elif serverResponse == "Ok3":
         s.sendall(OkCode.encode())
     elif serverResponse == "Ok4":

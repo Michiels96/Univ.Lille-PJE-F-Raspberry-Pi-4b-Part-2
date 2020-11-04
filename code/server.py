@@ -62,10 +62,13 @@ class ClientThread(threading.Thread):
                 display = "Ok2"
                 self.clientsocket.sendall(display.encode('utf-8'))
                 OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
+                if OkCode == "clientHasntOpenedAFile":
+                    print("Commande 'read <size>' annulée, le client n'a pas encore ouvert de fichier")
+                elif OkCode != "000":
                     print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                     break
-                self.readCommand()
+                else:
+                    self.readCommand()
             elif choix == '3':
                 display = "Ok3"
                 self.clientsocket.sendall(display.encode('utf-8'))
@@ -120,21 +123,63 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
         else:
             print("Ouverture du fichier: ", fileName, "...")
-            open(VIDEO_PATH+fileName, 'rb')
-
             # on sauvegarde le nom de fichier par thread client pour pouvoir le lire ensuite lors de l'exécution de la commande 'read' de celui-ci
             self.fileName = fileName
-            fileOpened = "fileOpened"
+            self.fileOpenedId = open(VIDEO_PATH+fileName, 'rb')
+            fileOpened = "Ok"
             self.clientsocket.sendall(fileOpened.encode('utf-8'))
             
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
 
     def readCommand(self):
         print("hello from readCommand()")
+        # avertir le client qu'il peut transmettre la taille d'octets à lire
+        readyForRecieveSize = "OkSize"
+        self.clientsocket.sendall(readyForRecieveSize.encode('utf-8'))
+        # reçoit la taille d'octets à lire
+        size = int((self.clientsocket.recv(1024)).decode('utf-8'))
+        
+        #si la taille du fichier est plus grand que le nombre d'octets que le client à demandé à lire, 
+        #on lui renvera size-1 octets (car la consigne demande que les N octets envoyés soient non-négatif et inférieur à <size>)
+        if os.path.getsize(VIDEO_PATH+self.fileName) >= size:
+            print("\ttaille du fichier plus grand que <size> donné")
+            #doit envoyer les N octets à lire
+            NOctetsALire = str((size-1))
+            self.clientsocket.sendall(NOctetsALire.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+            #doit envoyer les N octets du fichier
+            buffer = self.fileOpenedId.read(size-1)
+            #pas besoin d'encode(), on transfert les octets en binaire
+            self.clientsocket.sendall(buffer)
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+        else:
+            print("\ttaille du fichier plus petit que <size> donné")
+            #doit envoyer les N octets à lire
+            NOctetsALire = os.path.getsize(VIDEO_PATH+self.fileName)
+            self.clientsocket.sendall(str(NOctetsALire).encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+            #doit envoyer les N octets du fichier
+            buffer = self.fileOpenedId.read()
+            self.clientsocket.sendall(buffer)
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
 
     def closeCommand(self):
         print("hello from closeCommand()")
