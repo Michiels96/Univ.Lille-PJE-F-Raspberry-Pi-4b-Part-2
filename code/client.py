@@ -16,6 +16,7 @@ def openCommandResponse():
     readyForSendingFilename = (s.recv(1024)).decode('utf-8')
     if readyForSendingFilename != "OkFilename":
         print("Serveur n'est pas prêt à recevoir filename")
+        return
     fileName = ''
     while True:
         try:
@@ -61,7 +62,7 @@ def statCommandResponse():
 #reception du menu
 choix = ''
 while choix != "q":
-    
+    print("Ici ", fileAlreadyOpen)
     menu = s.recv(1024)
     print(menu.decode())
 
@@ -85,7 +86,7 @@ while choix != "q":
     #print("Recu -->", serverResponse, "\n")
 
     if serverResponse == "Ok1":
-        print("Ici ", fileAlreadyOpen)
+        
         if fileAlreadyOpen == True:
             print("Erreur, vous avez déjà ouvert un fichier")
             fileAlreadyOpened = "clientAlreadyOpenedAnotherFile"
