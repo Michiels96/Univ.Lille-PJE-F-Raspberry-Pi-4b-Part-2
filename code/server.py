@@ -11,8 +11,8 @@ ERROR_ARRAY = {
     '001': 'choix invalide!', 
     '002': 'Le client n\'a pas confirmé la réception du paquet venant du serveur!',
     '003': 'le client n\'a pas encore ouvert de fichier!',
-    '004': 'le client à déjà ouvert un autre fichier!',
-    '005': 'le fichier n\'existe pas ou n\'est pas lisible'
+    '004': 'le client a déjà ouvert un autre fichier!',
+    '005': 'le fichier n\'existe pas ou n\'est pas lisible!'
     }
 # path à utiliser pour le raspberry pi 
 #VIDEO_PATH = "/media/usb0/record/"
