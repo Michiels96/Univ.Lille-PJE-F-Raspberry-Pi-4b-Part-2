@@ -3,14 +3,16 @@
 import socket
 import threading
 import os
-
+import re
+import time
 
 # VARIABLES GLOBALES
 ERROR_ARRAY = {
     '001': 'choix invalide!', 
     '002': 'Le client n\'a pas confirmé la réception du paquet venant du serveur!',
     '003': 'le client n\'a pas encore ouvert de fichier!',
-    '004': 'le client à déjà ouvert un autre fichier!'
+    '004': 'le client à déjà ouvert un autre fichier!',
+    '005': 'le fichier n\'existe pas ou n\'est pas lisible'
     }
 # path à utiliser pour le raspberry pi 
 #VIDEO_PATH = "/media/usb0/record/"
@@ -102,6 +104,7 @@ class ClientThread(threading.Thread):
                     break
                 self.listCommand()
             elif choix == '5':
+                #pour cette option, il n'est pas nécessaire d'avoir ouvert préalablement un fichier
                 display = "Ok5"
                 self.clientsocket.sendall(display.encode('utf-8'))
                 OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
@@ -139,7 +142,7 @@ class ClientThread(threading.Thread):
 
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
         else:
             print("\tOuverture du fichier: ", fileName, "...")
@@ -152,7 +155,7 @@ class ClientThread(threading.Thread):
             
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
 
     def readCommand(self):
@@ -172,7 +175,7 @@ class ClientThread(threading.Thread):
             self.clientsocket.sendall(NOctetsALire.encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
             #doit envoyer les N octets du fichier
             buffer = self.fileOpenedId.read(size-1)
@@ -180,7 +183,7 @@ class ClientThread(threading.Thread):
             self.clientsocket.sendall(buffer)
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
         else:
             print("\ttaille du fichier plus petit que <size> donné")
@@ -189,7 +192,7 @@ class ClientThread(threading.Thread):
             self.clientsocket.sendall(str(NOctetsALire).encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
             #avant de lire le fichier, il faut remettre la position de lecture à sa position de départ
             self.fileOpenedId.seek(0, os.SEEK_SET)
@@ -198,7 +201,7 @@ class ClientThread(threading.Thread):
             self.clientsocket.sendall(buffer)
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
-                print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
 
     def closeCommand(self):
@@ -212,7 +215,7 @@ class ClientThread(threading.Thread):
             
         OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
         if OkCode != "000":
-            print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+            print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
             return
 
     def listCommand(self):
@@ -227,10 +230,75 @@ class ClientThread(threading.Thread):
         OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
         if OkCode != "000":
             #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
-            print("CODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+            print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
         
     def statCommand(self):
         print("hello from statCommand()")
+        # avertir le client qu'il peut transmettre le nom de fichier a rechercher
+        readyForRecieveFilename = "OkFilename"
+        self.clientsocket.sendall(readyForRecieveFilename.encode('utf-8'))
+        # reçoit le nom de fichier à ouvrir
+        fileName = (self.clientsocket.recv(1024)).decode('utf-8')
+        if(os.path.exists(VIDEO_PATH+fileName) == False):
+            noFile = "\tCODE ERREUR Nr 005: "+ERROR_ARRAY['005']
+            print(noFile)
+            self.clientsocket.sendall(noFile.encode('utf-8'))
+
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+        else:
+            fileOpened = "Ok"
+            self.clientsocket.sendall(fileOpened.encode('utf-8'))
+            
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+
+            #envoi des statistiques
+            #Taille (en octets)
+            bufferSystemResponse = re.search('os\.stat_result\((.+)\)', str(os.stat(VIDEO_PATH+fileName))).group(1).split(", ")
+            
+            bufferSystemResponseJsonArray = {}
+            for i in bufferSystemResponse:
+                savedKey = re.search('^(.+)=(.+)', str(i)).group(1)
+                savedValue = re.search('^(.+)=(.+)', str(i)).group(2)
+                bufferSystemResponseJsonArray[savedKey] = savedValue
+
+            sizeInBytes = bufferSystemResponseJsonArray["st_size"]
+            raw_time = int(bufferSystemResponseJsonArray["st_mtime"])
+            lastModified = time.ctime(raw_time)
+            raw_rights = re.search('([0-9])([0-9])([0-9])$', str(oct(int(bufferSystemResponseJsonArray["st_mode"]))))
+            userRights = self.giveTheRight(int(raw_rights.group(1)))
+            groupRight = self.giveTheRight(int(raw_rights.group(2)))
+            othersRight = self.giveTheRight(int(raw_rights.group(3)))
+            #le "-" indique que c'est un fichier et pas un dossier(ce qui est normal)
+            fileRightsInOctal = "-"+userRights+groupRight+othersRight
+            infoBufferForClient = "\t- taille (en octets): "+sizeInBytes+"\n\t- date de la dernière modification: \n\t\t"+lastModified+"\n\t- droits d’accès: "+fileRightsInOctal+"\n\n"
+            self.clientsocket.sendall(infoBufferForClient.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                return
+
+    def giveTheRight(self, number):
+        if number == 4:
+            return "r--"
+        elif number == 2:
+            return "-w-"
+        elif number == 1:
+            return "--x"
+        elif number == 6:
+            return "rw-"
+        elif number == 5:
+            return "r-x"
+        elif number == 3:
+            return "-wx"
+        elif number == 7:
+            return "rwx"
+
 
     def run(self):
         print("Connexion de %s %s" % (self.ip, self.port, ))

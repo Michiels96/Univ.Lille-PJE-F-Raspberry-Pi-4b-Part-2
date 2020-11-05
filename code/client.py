@@ -95,9 +95,35 @@ def listCommandResponse():
     s.sendall(OkCode.encode())
 
 def statCommandResponse():
-    return
+    readyForSendingFilename = (s.recv(1024)).decode('utf-8')
+    if readyForSendingFilename != "OkFilename":
+        print("\tServeur n'est pas prêt à recevoir filename\n")
+        return
+    fileName = ''
+    while True:
+        try:
+            print("Introduisez le nom du fichier à ouvrir pour en récupérer les statistiques: ")
+            fileName = input()
+            if fileName == '':
+                raise ValueError
+            else:
+                break
+        except:
+            print("\tErreur, saisie incorrecte! recommencez")
+            continue
 
-
+    s.sendall(fileName.encode('utf-8'))
+    fileExists = (s.recv(1024)).decode('utf-8')
+    if fileExists != "Ok":
+        print(fileExists,"\n")
+        s.sendall(OkCode.encode())
+    else:
+        s.sendall(OkCode.encode())
+        #recoit les statistiques
+        stats = (s.recv(1024)).decode('utf-8')
+        print("\tPropriétés du fichier '", fileName,"':")
+        print(stats)
+        s.sendall(OkCode.encode())
 
 
 #reception du menu
@@ -139,6 +165,7 @@ while choix != "q":
         listCommandResponse()
     elif serverResponse == "Ok5":
         s.sendall(OkCode.encode())
+        statCommandResponse()
     elif serverResponse == "Okq":
         s.sendall(OkCode.encode())
         break
@@ -146,16 +173,3 @@ while choix != "q":
         #erreur reçue du serveur
         print(serverResponse,"\n")
         s.sendall(OkCode.encode())
-    
-
-
-# print("Le nom du fichier que vous voulez récupérer:")
-# file_name = input(">> ") # utilisez raw_input() pour les anciennes versions python
-# s.send(file_name.encode())
-# file_name = 'data/%s' % (file_name,)
-
-# #reception de fichier
-# r = s.recv(9999999)
-# with open(file_name,'wb') as _file:
-#     _file.write(r)
-# print("Le fichier a été correctement copié dans : %s." % file_name)
