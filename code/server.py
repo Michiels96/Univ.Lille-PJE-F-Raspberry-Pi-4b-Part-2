@@ -18,6 +18,8 @@ ERROR_ARRAY = {
 #VIDEO_PATH = "/media/usb0/record/"
 VIDEO_PATH = "/root/record_sample/"
 
+clientArrayToCheckFileAlreadyOpen = {}
+
 class ClientThread(threading.Thread):
 
     def __init__(self, ip, port, clientsocket):
@@ -27,106 +29,107 @@ class ClientThread(threading.Thread):
         self.port = port
         self.clientsocket = clientsocket
         self.fileAlreadyOpen = False
+        # première fois que le client se connecte au serveur
+        if ip not in clientArrayToCheckFileAlreadyOpen:
+            clientArrayToCheckFileAlreadyOpen[ip] = False
         self.fileName = ''
         self.fileOpenedId = -1
 
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
 
     def menu(self):
-        choix = ""
-        while choix != "q":
-            option1 = "1) 'open <filename>' pour ouvrir un fichier passé en paramètre en lecture"
-            option2 = "2) 'read <size>' pour lire le fichier ouvert précédemment \n\t(Uniquement si un fichier a été ouvert précédemment)"
-            option3 = "3) 'close' pour fermer un fichier \n\t(Uniquement si un fichier a été ouvert précédemment)"
-            option4 = "4) 'list' pour afficher l'arborescence des fichiers"
-            option5 = "5) 'stat <filename>' pour afficher les propriétés du fichier passé en paramètre"
-            optionQuit = "'q' pour se déconnecter"
-            display = option1+"\n"+option2+"\n"+option3+"\n"+option4+"\n"+option5+"\n"+optionQuit+"\n"
-            #print(display)
+        # option1 = "1) 'open <filename>' pour ouvrir un fichier passé en paramètre en lecture"
+        # option2 = "2) 'read <size>' pour lire le fichier ouvert précédemment \n\t(Uniquement si un fichier a été ouvert précédemment)"
+        # option3 = "3) 'close' pour fermer un fichier \n\t(Uniquement si un fichier a été ouvert précédemment)"
+        # option4 = "4) 'list' pour afficher l'arborescence des fichiers"
+        # option5 = "5) 'stat <filename>' pour afficher les propriétés du fichier passé en paramètre"
+        # optionQuit = "'q' pour se déconnecter"
+        # display = option1+"\n"+option2+"\n"+option3+"\n"+option4+"\n"+option5+"\n"+optionQuit+"\n"
+        #print(display)
 
-            # conversion en bytes pour l'envoi vers le client
-            # paquet = bytes(display, 'utf-8')
-            # self.clientsocket.sendall(paquet)
-            #self.clientsocket.sendall(display.encode('utf-8'))
-            
-            choix = (self.clientsocket.recv(1024)).decode('utf-8')
-            print("RECU du client --> ", choix)
+        # conversion en bytes pour l'envoi vers le client
+        # paquet = bytes(display, 'utf-8')
+        # self.clientsocket.sendall(paquet)
+        #self.clientsocket.sendall(display.encode('utf-8'))
+        
+        choix = (self.clientsocket.recv(1024)).decode('utf-8')
+        print("RECU du client --> ", choix)
 
-            #switch inexistant en Python
-            if choix == '1':
-                if self.fileAlreadyOpen == True:
-                    display = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
-                    print(display)
-                else:
-                    display = "Ok1"
-
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-                if self.fileAlreadyOpen == False:
-                    self.openCommand()
-            elif choix == '2':
-                if self.fileAlreadyOpen == False:
-                    display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
-                    print(display)
-                else:
-                    display = "Ok2"
-                
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-                if self.fileAlreadyOpen == True:
-                    self.readCommand()
-            elif choix == '3':
-                if self.fileAlreadyOpen == False:
-                    display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
-                    print(display)
-                else:
-                    display = "Ok3"
-
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-                if self.fileAlreadyOpen == True:
-                    self.closeCommand()
-            elif choix == '4':
-                display = "Ok4"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-                self.listCommand()
-            elif choix == '5':
-                #pour cette option, il n'est pas nécessaire d'avoir ouvert préalablement un fichier
-                display = "Ok5"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-                self.statCommand()
-            elif choix == 'q':
-                display = "Okq"
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
-            else:
-                display = "\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001']
+        #switch inexistant en Python
+        if choix == '1':
+            if clientArrayToCheckFileAlreadyOpen[self.ip] == True:
+                display = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
                 print(display)
-                self.clientsocket.sendall(display.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                    break
+            else:
+                display = "Ok1"
+
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+            if clientArrayToCheckFileAlreadyOpen[self.ip] == False:
+                self.openCommand()
+        elif choix == '2':
+            if self.fileAlreadyOpen == False:
+                display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
+                print(display)
+            else:
+                display = "Ok2"
+            
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+            if self.fileAlreadyOpen == True:
+                self.readCommand()
+        elif choix == '3':
+            if self.fileAlreadyOpen == False:
+                display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
+                print(display)
+            else:
+                display = "Ok3"
+
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+            if self.fileAlreadyOpen == True:
+                self.closeCommand()
+        elif choix == '4':
+            display = "Ok4"
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+            self.listCommand()
+        elif choix == '5':
+            #pour cette option, il n'est pas nécessaire d'avoir ouvert préalablement un fichier
+            display = "Ok5"
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+            self.statCommand()
+        elif choix == 'q':
+            display = "Okq"
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
+        else:
+            display = "\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001']
+            print(display)
+            self.clientsocket.sendall(display.encode('utf-8'))
+            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+            if OkCode != "000":
+                print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+                #break
 
     def openCommand(self):
         print("hello from openCommand()")
@@ -149,7 +152,7 @@ class ClientThread(threading.Thread):
             # on sauvegarde le nom de fichier par thread client pour pouvoir le lire ensuite lors de l'exécution de la commande 'read' de celui-ci
             self.fileName = fileName
             self.fileOpenedId = open(VIDEO_PATH+fileName, 'rb')
-            self.fileAlreadyOpen = True
+            clientArrayToCheckFileAlreadyOpen[self.ip] = True
             fileOpened = "Ok"
             self.clientsocket.sendall(fileOpened.encode('utf-8'))
             
