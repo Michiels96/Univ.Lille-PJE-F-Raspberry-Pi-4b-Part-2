@@ -1,6 +1,6 @@
 PJE F Raspberry Pi 4b Part 2
 
-Patterns de commande pour lancer les fichiers:
+Patterns de commande pour exécuter les fichiers:
 - server.py
     python3 server.py <PORT>
 - openClient.py:
