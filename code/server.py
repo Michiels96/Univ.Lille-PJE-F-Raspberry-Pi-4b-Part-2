@@ -5,6 +5,7 @@ import threading
 import os
 import re
 import time
+import sys
 
 # VARIABLES GLOBALES
 ERROR_ARRAY = {
@@ -18,7 +19,8 @@ ERROR_ARRAY = {
 #VIDEO_PATH = "/media/usb0/record/"
 VIDEO_PATH = "/root/record_sample/"
 
-clientArrayToCheckFileAlreadyOpen = {}
+clientArrayOpenedFileName = {}
+clientArrayOpenedFileNameId = {}
 
 class ClientThread(threading.Thread):
 
@@ -28,12 +30,12 @@ class ClientThread(threading.Thread):
         self.ip = ip
         self.port = port
         self.clientsocket = clientsocket
-        self.fileAlreadyOpen = False
+        #self.fileAlreadyOpen = False
         # première fois que le client se connecte au serveur
-        if ip not in clientArrayToCheckFileAlreadyOpen:
-            clientArrayToCheckFileAlreadyOpen[ip] = False
-        self.fileName = ''
-        self.fileOpenedId = -1
+        if ip not in clientArrayOpenedFileName:
+            clientArrayOpenedFileName[ip] = 'null'
+        #self.fileName = ''
+        #self.fileOpenedId = -1
 
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
 
@@ -57,7 +59,7 @@ class ClientThread(threading.Thread):
 
         #switch inexistant en Python
         if choix == '1':
-            if clientArrayToCheckFileAlreadyOpen[self.ip] == True:
+            if clientArrayOpenedFileName[self.ip] != 'null':
                 display = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
                 print(display)
             else:
@@ -68,10 +70,10 @@ class ClientThread(threading.Thread):
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 #break
-            if clientArrayToCheckFileAlreadyOpen[self.ip] == False:
+            if clientArrayOpenedFileName[self.ip] == 'null':
                 self.openCommand()
         elif choix == '2':
-            if self.fileAlreadyOpen == False:
+            if clientArrayOpenedFileName[self.ip] == 'null':
                 display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
                 print(display)
             else:
@@ -82,7 +84,7 @@ class ClientThread(threading.Thread):
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 #break
-            if self.fileAlreadyOpen == True:
+            if clientArrayOpenedFileName[self.ip] != 'null':
                 self.readCommand()
         elif choix == '3':
             if self.fileAlreadyOpen == False:
@@ -150,9 +152,9 @@ class ClientThread(threading.Thread):
         else:
             print("\tOuverture du fichier: ", fileName, "...")
             # on sauvegarde le nom de fichier par thread client pour pouvoir le lire ensuite lors de l'exécution de la commande 'read' de celui-ci
-            self.fileName = fileName
-            self.fileOpenedId = open(VIDEO_PATH+fileName, 'rb')
-            clientArrayToCheckFileAlreadyOpen[self.ip] = True
+            #self.fileName = fileName
+            clientArrayOpenedFileName[self.ip] = fileName
+            clientArrayOpenedFileNameId[self.ip] = open(VIDEO_PATH+fileName, 'rb')
             fileOpened = "Ok"
             self.clientsocket.sendall(fileOpened.encode('utf-8'))
             
@@ -163,6 +165,7 @@ class ClientThread(threading.Thread):
 
     def readCommand(self):
         print("hello from readCommand()")
+        fileOpenedId = clientArrayOpenedFileNameId[self.ip]
         # avertir le client qu'il peut transmettre la taille d'octets à lire
         readyForRecieveSize = "OkSize"
         self.clientsocket.sendall(readyForRecieveSize.encode('utf-8'))
@@ -171,7 +174,7 @@ class ClientThread(threading.Thread):
         
         #si la taille du fichier est plus grand que le nombre d'octets que le client à demandé à lire, 
         #on lui renvera size-1 octets (car la consigne demande que les N octets envoyés soient non-négatif et inférieur à <size>)
-        if os.path.getsize(VIDEO_PATH+self.fileName) >= size:
+        if os.path.getsize(VIDEO_PATH+clientArrayOpenedFileName[self.ip]) >= size:
             print("\ttaille du fichier plus grand que <size> donné")
             #doit envoyer les N octets à lire
             NOctetsALire = str((size-1))
@@ -181,7 +184,7 @@ class ClientThread(threading.Thread):
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
             #doit envoyer les N octets du fichier
-            buffer = self.fileOpenedId.read(size-1)
+            buffer = fileOpenedId.read(size-1)
             #pas besoin d'encode(), on transfert les octets en binaire
             self.clientsocket.sendall(buffer)
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
@@ -191,16 +194,16 @@ class ClientThread(threading.Thread):
         else:
             print("\ttaille du fichier plus petit que <size> donné")
             #doit envoyer les N octets à lire
-            NOctetsALire = os.path.getsize(VIDEO_PATH+self.fileName)
+            NOctetsALire = os.path.getsize(VIDEO_PATH+clientArrayOpenedFileName[self.ip])
             self.clientsocket.sendall(str(NOctetsALire).encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
             #avant de lire le fichier, il faut remettre la position de lecture à sa position de départ
-            self.fileOpenedId.seek(0, os.SEEK_SET)
+            fileOpenedId.seek(0, os.SEEK_SET)
             #doit envoyer les N octets du fichier
-            buffer = self.fileOpenedId.read()
+            buffer = fileOpenedId.read()
             self.clientsocket.sendall(buffer)
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
@@ -234,6 +237,9 @@ class ClientThread(threading.Thread):
         if OkCode != "000":
             #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
             print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+
+        print(clientArrayOpenedFileName)
+        print(clientArrayOpenedFileNameId)
         
     def statCommand(self):
         print("hello from statCommand()")
@@ -312,7 +318,8 @@ class ClientThread(threading.Thread):
 tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # "" pour l'HOST permet de recevoir une connexion de n'importe quelle addr IP
-tcpsock.bind(("",8080))
+port = int(sys.argv[1])
+tcpsock.bind(("",port))
 
 while True:
     tcpsock.listen(10)

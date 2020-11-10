@@ -14,7 +14,6 @@ class Client():
         ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
         ## ceci permet d'avoir une architecture synchrone 
         self.OkCode = "000"
-        self.fileNameSaved = ''
 
     def listCommandResponse(self):
         print("Liste de tous les fichiers dans le répertoire:")
