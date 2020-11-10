@@ -30,30 +30,13 @@ class ClientThread(threading.Thread):
         self.ip = ip
         self.port = port
         self.clientsocket = clientsocket
-        #self.fileAlreadyOpen = False
         # première fois que le client se connecte au serveur
         if ip not in clientArrayOpenedFileName:
             clientArrayOpenedFileName[ip] = 'null'
-        #self.fileName = ''
-        #self.fileOpenedId = -1
 
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
 
-    def menu(self):
-        # option1 = "1) 'open <filename>' pour ouvrir un fichier passé en paramètre en lecture"
-        # option2 = "2) 'read <size>' pour lire le fichier ouvert précédemment \n\t(Uniquement si un fichier a été ouvert précédemment)"
-        # option3 = "3) 'close' pour fermer un fichier \n\t(Uniquement si un fichier a été ouvert précédemment)"
-        # option4 = "4) 'list' pour afficher l'arborescence des fichiers"
-        # option5 = "5) 'stat <filename>' pour afficher les propriétés du fichier passé en paramètre"
-        # optionQuit = "'q' pour se déconnecter"
-        # display = option1+"\n"+option2+"\n"+option3+"\n"+option4+"\n"+option5+"\n"+optionQuit+"\n"
-        #print(display)
-
-        # conversion en bytes pour l'envoi vers le client
-        # paquet = bytes(display, 'utf-8')
-        # self.clientsocket.sendall(paquet)
-        #self.clientsocket.sendall(display.encode('utf-8'))
-        
+    def menu(self):     
         choix = (self.clientsocket.recv(1024)).decode('utf-8')
         print("RECU du client --> ", choix)
 
@@ -69,7 +52,6 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
             if clientArrayOpenedFileName[self.ip] == 'null':
                 self.openCommand()
         elif choix == '2':
@@ -83,11 +65,10 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
             if clientArrayOpenedFileName[self.ip] != 'null':
                 self.readCommand()
         elif choix == '3':
-            if self.fileAlreadyOpen == False:
+            if clientArrayOpenedFileName[self.ip] == 'null':
                 display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
                 print(display)
             else:
@@ -97,8 +78,7 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
-            if self.fileAlreadyOpen == True:
+            if clientArrayOpenedFileName[self.ip] != 'null':
                 self.closeCommand()
         elif choix == '4':
             display = "Ok4"
@@ -106,7 +86,6 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
             self.listCommand()
         elif choix == '5':
             #pour cette option, il n'est pas nécessaire d'avoir ouvert préalablement un fichier
@@ -115,7 +94,6 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
             self.statCommand()
         elif choix == 'q':
             display = "Okq"
@@ -123,7 +101,6 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
         else:
             display = "\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001']
             print(display)
@@ -131,7 +108,6 @@ class ClientThread(threading.Thread):
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-                #break
 
     def openCommand(self):
         print("hello from openCommand()")
@@ -142,8 +118,8 @@ class ClientThread(threading.Thread):
         fileName = (self.clientsocket.recv(1024)).decode('utf-8')
         if(os.path.exists(VIDEO_PATH+fileName) == False):
             print("\tFichier ", fileName, "inexistant")
-            noFile = "noFile"
-            self.clientsocket.sendall(noFile.encode('utf-8'))
+            display = "\tCODE ERREUR Nr 005: "+ERROR_ARRAY['005']
+            self.clientsocket.sendall(display.encode('utf-8'))
 
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
@@ -151,8 +127,6 @@ class ClientThread(threading.Thread):
                 return
         else:
             print("\tOuverture du fichier: ", fileName, "...")
-            # on sauvegarde le nom de fichier par thread client pour pouvoir le lire ensuite lors de l'exécution de la commande 'read' de celui-ci
-            #self.fileName = fileName
             clientArrayOpenedFileName[self.ip] = fileName
             clientArrayOpenedFileNameId[self.ip] = open(VIDEO_PATH+fileName, 'rb')
             fileOpened = "Ok"
@@ -212,9 +186,10 @@ class ClientThread(threading.Thread):
 
     def closeCommand(self):
         print("hello from closeCommand()")
-        self.fileOpenedId.close()
-        print("\tFichier '", self.fileName,"' fermé!")
-        self.fileAlreadyOpen = False
+        clientArrayOpenedFileNameId[self.ip].close()
+        print("\tFichier '", clientArrayOpenedFileName[self.ip],"' fermé!")
+        clientArrayOpenedFileNameId[self.ip] = ''
+        clientArrayOpenedFileName[self.ip] = 'null'
 
         fileClosed = "Ok"
         self.clientsocket.sendall(fileClosed.encode('utf-8'))
@@ -238,12 +213,12 @@ class ClientThread(threading.Thread):
             #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
             print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
 
-        print(clientArrayOpenedFileName)
-        print(clientArrayOpenedFileNameId)
+        print("\t",clientArrayOpenedFileName)
+        print("\t",clientArrayOpenedFileNameId)
         
     def statCommand(self):
         print("hello from statCommand()")
-        # avertir le client qu'il peut transmettre le nom de fichier a rechercher
+        # avertir le client qu'il peut transmettre le nom de fichier à rechercher
         readyForRecieveFilename = "OkFilename"
         self.clientsocket.sendall(readyForRecieveFilename.encode('utf-8'))
         # reçoit le nom de fichier à ouvrir

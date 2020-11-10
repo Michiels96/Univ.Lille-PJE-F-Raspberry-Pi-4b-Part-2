@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import socket
+import re
 import sys
 
 # path à utiliser pour le raspberry pi 
@@ -24,8 +25,9 @@ class Client():
 
         s.sendall(self.argFilenameToOpen .encode('utf-8'))
         fileExists = (s.recv(1024)).decode('utf-8')
-        if fileExists == "noFile":
-            print("\tErreur, le fichier n'existe pas ou n'est pas lisible\n")
+
+        if re.search('^\tCODE', fileExists):
+            print(fileExists, "\n")
             s.sendall(self.OkCode.encode())
         else:
             print("\t", fileExists,"\n\n")

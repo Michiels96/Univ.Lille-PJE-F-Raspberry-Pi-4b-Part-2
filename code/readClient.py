@@ -59,17 +59,6 @@ class Client():
         s.sendall(self.OkCode.encode())
         print("\tFichier '", fileNameSaved,"' écrit!\n\n")
 
-    def closeCommandResponse(self):
-        fileClosed = (s.recv(1024)).decode('utf-8')
-        if fileClosed != "Ok":
-            print("\tServeur n'a pas su fermer le fichier '", self.fileNameSaved,"'\n")
-            return
-        else:
-            print("\tLe Fichier '", self.fileNameSaved,"' a correctement été fermé!\n\n")
-            self.fileNameSaved = ''
-            s.sendall(self.OkCode.encode())
-
-
     def main(self):
         listOption = "2"
         s.sendall(listOption.encode())
@@ -81,9 +70,6 @@ class Client():
         if serverResponse == "Ok2":
             s.sendall(self.OkCode.encode())
             self.readCommandResponse()
-        # elif serverResponse == "Ok3":
-        #     s.sendall(self.OkCode.encode())
-        #     self.closeCommandResponse()
         else:
             #erreur reçue du serveur
             print(serverResponse,"\n")
