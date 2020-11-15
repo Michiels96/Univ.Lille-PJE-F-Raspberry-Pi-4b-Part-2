@@ -12,5 +12,5 @@ Patterns de commande pour exécuter les fichiers:
 - listClient:
     python3 listClient.py <IP> <PORT>
 - statClient.py:
-    python3 listClient.py <IP> <PORT> <filename>
+    python3 statClient.py <IP> <PORT> <filename>
 
