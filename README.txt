@@ -1,5 +1,6 @@
 PJE F Raspberry Pi 4b Part 2
 
+Partie 1 (code/part1)
 Patterns de commande pour exécuter les fichiers:
 - server.py
     python3 server.py <PORT>
@@ -14,3 +15,4 @@ Patterns de commande pour exécuter les fichiers:
 - statClient.py:
     python3 statClient.py <IP> <PORT> <filename>
 
+Partie 2 (code/part2)
