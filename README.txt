@@ -16,3 +16,11 @@ Patterns de commande pour exécuter les fichiers:
     python3 statClient.py <IP> <PORT> <filename>
 
 Partie 2 (code/part2)
+Patterns de commande pour exécuter les fichiers:
+- master.py
+    python3 master.py <PORT>
+- publisher.py 
+    Pour s'inscrire au master:
+        python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <0>
+    Pour alerter tous ses subscribers:
+        python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <1>
