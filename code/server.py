@@ -27,13 +27,15 @@ class ClientThread(threading.Thread):
     def __init__(self, ip, port, clientsocket):
 
         threading.Thread.__init__(self)
+        self.lock = threading.Lock()
         self.ip = ip
         self.port = port
         self.clientsocket = clientsocket
         # première fois que le client se connecte au serveur
+        self.lock.acquire()
         if ip not in clientArrayOpenedFileName:
             clientArrayOpenedFileName[ip] = 'null'
-
+        self.lock.release()
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
 
     def menu(self):     
@@ -42,44 +44,62 @@ class ClientThread(threading.Thread):
 
         #switch inexistant en Python
         if choix == '1':
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] != 'null':
                 display = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
                 print(display)
             else:
                 display = "Ok1"
+            self.lock.release()
 
             self.clientsocket.sendall(display.encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] == 'null':
+                self.lock.release()
                 self.openCommand()
+            else:
+                self.lock.release()
         elif choix == '2':
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] == 'null':
                 display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
                 print(display)
             else:
                 display = "Ok2"
+            self.lock.release()
             
             self.clientsocket.sendall(display.encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] != 'null':
+                self.lock.release()
                 self.readCommand()
+            else:
+                self.lock.release()
         elif choix == '3':
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] == 'null':
                 display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
                 print(display)
             else:
                 display = "Ok3"
+            self.lock.release()
 
             self.clientsocket.sendall(display.encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
+            self.lock.acquire()
             if clientArrayOpenedFileName[self.ip] != 'null':
+                self.lock.release()
                 self.closeCommand()
+            else:
+                self.lock.release()
         elif choix == '4':
             display = "Ok4"
             self.clientsocket.sendall(display.encode('utf-8'))
@@ -127,8 +147,10 @@ class ClientThread(threading.Thread):
                 return
         else:
             print("\tOuverture du fichier: ", fileName, "...")
+            self.lock.acquire()
             clientArrayOpenedFileName[self.ip] = fileName
             clientArrayOpenedFileNameId[self.ip] = open(VIDEO_PATH+fileName, 'rb')
+            self.lock.release()
             fileOpened = "Ok"
             self.clientsocket.sendall(fileOpened.encode('utf-8'))
             
@@ -139,7 +161,9 @@ class ClientThread(threading.Thread):
 
     def readCommand(self):
         print("hello from readCommand()")
+        self.lock.acquire()
         fileOpenedId = clientArrayOpenedFileNameId[self.ip]
+        self.lock.release()
         # avertir le client qu'il peut transmettre la taille d'octets à lire
         readyForRecieveSize = "OkSize"
         self.clientsocket.sendall(readyForRecieveSize.encode('utf-8'))
@@ -148,7 +172,9 @@ class ClientThread(threading.Thread):
         
         #si la taille du fichier est plus grand que le nombre d'octets que le client à demandé à lire, 
         #on lui renvera size-1 octets (car la consigne demande que les N octets envoyés soient non-négatif et inférieur à <size>)
+        self.lock.acquire()
         if os.path.getsize(VIDEO_PATH+clientArrayOpenedFileName[self.ip]) >= size:
+            self.lock.release()
             print("\ttaille du fichier plus grand que <size> donné")
             #doit envoyer les N octets à lire
             NOctetsALire = str((size-1))
@@ -166,9 +192,12 @@ class ClientThread(threading.Thread):
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
         else:
+            self.lock.release()
             print("\ttaille du fichier plus petit que <size> donné")
             #doit envoyer les N octets à lire
+            self.lock.acquire()
             NOctetsALire = os.path.getsize(VIDEO_PATH+clientArrayOpenedFileName[self.ip])
+            self.lock.release()
             self.clientsocket.sendall(str(NOctetsALire).encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
             if OkCode != "000":
@@ -186,11 +215,12 @@ class ClientThread(threading.Thread):
 
     def closeCommand(self):
         print("hello from closeCommand()")
+        self.lock.acquire()
         clientArrayOpenedFileNameId[self.ip].close()
         print("\tFichier '", clientArrayOpenedFileName[self.ip],"' fermé!")
         clientArrayOpenedFileNameId[self.ip] = ''
         clientArrayOpenedFileName[self.ip] = 'null'
-
+        self.lock.release()
         fileClosed = "Ok"
         self.clientsocket.sendall(fileClosed.encode('utf-8'))
             
@@ -212,9 +242,10 @@ class ClientThread(threading.Thread):
         if OkCode != "000":
             #print("Fatal Error, client hasn't send the end-code to server, \n\tclient-connection will now end\n\tGoodbye dear ", self.ip)
             print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
-
+        self.lock.acquire()
         print("\t",clientArrayOpenedFileName)
         print("\t",clientArrayOpenedFileNameId)
+        self.lock.release()
         
     def statCommand(self):
         print("hello from statCommand()")
