@@ -26,6 +26,6 @@ Patterns de commande pour exécuter les fichiers:
         python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <1>
 - subscriber.py
     Pour s'inscrire au master:
-        python3 subscriber.py <IpDuMaster <PortDuMaster> <NomDuSubscriber> <0>
+        python3 subscriber.py <IpDuMaster <PortDuMaster> <NomDuSubscriber> <NomDuPublisher> <0>
     Pour rester en écoute aux publishers auquel le subscriber est inscrit:
         python3 subscriber.py <IpDuMaster> <PortDuMaster> <1>
