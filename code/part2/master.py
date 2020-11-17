@@ -2,13 +2,14 @@
 
 import socket
 import threading
+import sys
 import copy
 
 # VARIABLES GLOBALES
 ERROR_ARRAY = {
     '001': 'Le publisher n\'a pas confirmé la réception du paquet venant du Master!',
     '002': 'Le subscriber n\'a pas confirmé la réception du paquet venant du Master!',
-    '003': 'Le publisher connecté à déjà été inscrit au Master',
+    '003': 'Le nom du publisher est déjà inscrit au Master',
     '004': 'Le publisher connecté n\'est pas inscrit au Master'
 }
 
@@ -45,15 +46,30 @@ class ClientThread(threading.Thread):
                 display = "\tCODE ERREUR Nr 003: "+ERROR_ARRAY['003']
                 print(display)
             else:
-                publisherSubscriberArray[publisherName] = []
-                display = "inscriptionOk"
-                
-            self.clientsocket.sendall(display.encode('utf-8'))
-            OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-            if OkCode != "000":
-                print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
+                display = "nouvPublisher"
+                self.clientsocket.sendall(display.encode('utf-8'))
+                #reception de la liste des fichiers déjà existants pour le publisher à inscrire
+                listeFichiers = (self.clientsocket.recv(1024)).decode('utf-8')
+                listeFichiers = listeFichiers.split("\n")
+                #enlever le dernier \n
+                listeFichiers.pop()
+                self.lock.acquire()
+                publisherSubscriberArray[publisherName] = {}
+                publisherSubscriberArray[publisherName]["fileList"] = listeFichiers
+                publisherSubscriberArray[publisherName]["subscribers"] = {}
+                publisherSubscriberArray[publisherName]["subscribers"]["sub1"] = "127.0.45.89"
+                publisherSubscriberArray[publisherName]["subscribers"]["sub2"] = "192.168.1.2"
+                self.lock.release()
+
+                receptionCode = "inscriptionOk"
+                self.clientsocket.sendall(receptionCode.encode('utf-8'))
+
+                self.lock.acquire()
+                print("\t", publisherSubscriberArray)
+                self.lock.release()
 
         elif choix == 'getSubscribers':
+            #Il faut aussi enregistrer le nouveau fichier dans la liste des fichiers du publisher
             #reception de l'id du publisher connecté
             readyForRecievePublisherName = "okPublisherName"
             self.clientsocket.sendall(readyForRecievePublisherName.encode('utf-8'))
@@ -72,15 +88,22 @@ class ClientThread(threading.Thread):
                     print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
                     return
             else:
+                receptionCode = "inscritOk"
+                self.clientsocket.sendall(receptionCode.encode('utf-8'))
                 #renvoyer la liste de ses subscribers
-                self.lock.acquire()
-                subscribers = copy.deepcopy(publisherSubscriberArray[publisherName])
-                self.lock.release()
-                self.clientsocket.sendall(subscribers.encode('utf-8'))
-                OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                if OkCode != "000":
-                    print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
-                    return
+                readyToSendSubscribers = (self.clientsocket.recv(1024)).decode('utf-8')
+                if readyToSendSubscribers == "readySubcr":
+                    self.lock.acquire()
+                    subscribers = copy.copy(publisherSubscriberArray[publisherName]["subscribers"])
+                    self.lock.release()
+                    self.clientsocket.sendall(str(subscribers).encode('utf-8'))
+                    OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                    if OkCode != "000":
+                        print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
+                        return
+                else:
+                    print("\tError: confirmation de reception des subscribers non-reçue\n\n")
+                
                     
             #Partie subscriber
 
