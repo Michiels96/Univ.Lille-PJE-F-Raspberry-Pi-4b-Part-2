@@ -65,7 +65,8 @@ class ClientThread(threading.Thread):
                 self.clientsocket.sendall(receptionCode.encode('utf-8'))
 
                 self.lock.acquire()
-                print("\t", publisherSubscriberArray)
+                #print("\t", publisherSubscriberArray)
+                print("\tLEN - nombre de fichiers du publisher <", publisherName,">", len(publisherSubscriberArray[publisherName]["fileList"]))
                 self.lock.release()
 
         elif choix == 'getSubscribers':
@@ -75,24 +76,41 @@ class ClientThread(threading.Thread):
             self.clientsocket.sendall(readyForRecievePublisherName.encode('utf-8'))
             publisherName = (self.clientsocket.recv(1024)).decode('utf-8')
 
+            readyForRecieveNewFileName = "okNewFileName"
+            self.clientsocket.sendall(readyForRecieveNewFileName.encode('utf-8'))
+            newFileName = (self.clientsocket.recv(1024)).decode('utf-8')
+
             #vérification si le publisher est déjà inscrit
             self.lock.acquire()
             estInscrit = self.checkIfPublisherIsSignedIn(publisherName)
             self.lock.release()
             if estInscrit == False:
-                display = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
-                print(display)
-                self.clientsocket.sendall(display.encode('utf-8'))
+                codePublisherName = "\tCODE ERREUR Nr 004: "+ERROR_ARRAY['004']
+                print(codePublisherName)
+                self.clientsocket.sendall(codePublisherName.encode('utf-8'))
                 OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
                 if OkCode != "000":
                     print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
                     return
             else:
-                receptionCode = "inscritOk"
-                self.clientsocket.sendall(receptionCode.encode('utf-8'))
+                codePublisherInscrit = "okPublisherInscrit"
+                self.clientsocket.sendall(codePublisherInscrit.encode('utf-8'))
+                # OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
+                # if OkCode != "000":
+                #     print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
+                #     return
+
+                #ajouter le nom du nouveau fichier dans la liste des fichiers du publisher inscrit
+                #ceci permet aux nouveaux subscribers de recevoir la liste des fichiers du publisher, auxquels ils s'abonnent, à jour
+                self.lock.acquire()
+                publisherSubscriberArray[publisherName]["fileList"].append(newFileName)
+                print("\tLEN - nombre de fichiers du publisher <", publisherName,">", len(publisherSubscriberArray[publisherName]["fileList"]))
+                self.lock.release()
+                
+
                 #renvoyer la liste de ses subscribers
                 readyToSendSubscribers = (self.clientsocket.recv(1024)).decode('utf-8')
-                if readyToSendSubscribers == "readySubcr":
+                if readyToSendSubscribers == "okSubscribers":
                     self.lock.acquire()
                     subscribers = copy.copy(publisherSubscriberArray[publisherName]["subscribers"])
                     self.lock.release()

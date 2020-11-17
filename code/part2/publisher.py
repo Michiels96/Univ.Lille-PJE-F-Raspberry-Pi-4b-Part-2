@@ -58,7 +58,7 @@ class Publisher():
                 
                 for f in os.listdir(VIDEO_PATH):
                     if not f.startswith('.') and f not in videoList:
-                        print("\tNouvelle video/fichier! <", f,">\n\n")
+                        print("\n\tNouvelle video/fichier! <", f,">\n")
                         alreadyDisplayedWithoutAddingAFile = False
                         videoList.append(f)
                         #reception de tous les noms et addr ip de ses subscribers de la part du master
@@ -70,30 +70,35 @@ class Publisher():
                             print("\tMaster n'est pas prêt à recevoir publisherName\n")
                             s.sendall(self.OkCode.encode())
                             return
-                        else:
-                            s.sendall(self.publisherName.encode())
-                            receptionCode = (s.recv(1024)).decode('utf-8')
-                            if receptionCode == "inscritOk":
-                                #reception des subscribers
-                                readyToSendSubscribers = "readySubcr"
-                                s.sendall(readyToSendSubscribers.encode())
-                                print("\tReception des subscribers ...\n")
-                                subscribers = (s.recv(1024)).decode('utf-8')
-                                print("\tSubscribers:", subscribers)
-                                subscribers = eval(subscribers)
-                                print("sub2 -> ", subscribers["sub2"])
-                                s.sendall(self.OkCode.encode())
+                        s.sendall(self.publisherName.encode())
 
-                                ## Partie connexion et envois du nouveau nom du fichier à tous les subscribers
+                        readyForSendingNewFileName = (s.recv(1024)).decode('utf-8')
+                        if readyForSendingNewFileName != "okNewFileName":
+                            print("\tMaster n'est pas prêt à recevoir le nom du nouveau fichier\n")
+                            s.sendall(self.OkCode.encode())
+                            return
+                        s.sendall(str(f).encode())
 
+                        codePublisherInscrit = (s.recv(1024)).decode('utf-8')
+                        if codePublisherInscrit != "okPublisherInscrit":
+                            print(codePublisherInscrit, "\n\n")
+                            s.sendall(self.OkCode.encode())
+                            return 
 
 
+                        #reception des subscribers
+                        readyForRecievingSubscribers = "okSubscribers"
+                        s.sendall(readyForRecievingSubscribers.encode())
 
-                            else:
-                                print(receptionCode, "\n")
-                                s.sendall(self.OkCode.encode())
-                                return
+                        print("\tReception des subscribers ...")
+                        subscribers = (s.recv(1024)).decode('utf-8')
 
+                        print("\tSubscribers:\n\t\t", subscribers)
+                        subscribers = eval(subscribers)
+
+                        s.sendall(self.OkCode.encode()) 
+
+                        #envoyer le nom du nouveau fichier a chaque subscriber
                 
         else:
             print("\tErreur, le dernier argument n'est pas valide ou n'a pas été donné\n\n")
