@@ -62,41 +62,48 @@ class Publisher():
                         alreadyDisplayedWithoutAddingAFile = False
                         videoList.append(f)
                         #reception de tous les noms et addr ip de ses subscribers de la part du master
-                        listOption = "getSubscribers"
-                        s.sendall(listOption.encode())
 
-                        readyForSendingPublisherName = (s.recv(1024)).decode('utf-8')
+                        #comme c'est un programme en boucle, il faudra ouvrir une connexion spéciale pour chaque ajout de fichier
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        #s.connect(("127.0.0.1", 8080)) 
+                        sock.connect((ipMaster, portMaster))
+
+                        listOption = "getSubscribers"
+                        sock.sendall(listOption.encode())
+
+                        readyForSendingPublisherName = (sock.recv(1024)).decode('utf-8')
                         if readyForSendingPublisherName != "okPublisherName":
                             print("\tMaster n'est pas prêt à recevoir publisherName\n")
-                            s.sendall(self.OkCode.encode())
+                            sock.sendall(self.OkCode.encode())
                             return
-                        s.sendall(self.publisherName.encode())
+                        sock.sendall(self.publisherName.encode())
 
-                        readyForSendingNewFileName = (s.recv(1024)).decode('utf-8')
+                        readyForSendingNewFileName = (sock.recv(1024)).decode('utf-8')
                         if readyForSendingNewFileName != "okNewFileName":
                             print("\tMaster n'est pas prêt à recevoir le nom du nouveau fichier\n")
-                            s.sendall(self.OkCode.encode())
+                            sock.sendall(self.OkCode.encode())
                             return
-                        s.sendall(str(f).encode())
+                        sock.sendall(str(f).encode())
 
-                        codePublisherInscrit = (s.recv(1024)).decode('utf-8')
+                        codePublisherInscrit = (sock.recv(1024)).decode('utf-8')
                         if codePublisherInscrit != "okPublisherInscrit":
                             print(codePublisherInscrit, "\n\n")
-                            s.sendall(self.OkCode.encode())
+                            sock.sendall(self.OkCode.encode())
                             return 
 
 
                         #reception des subscribers
                         readyForRecievingSubscribers = "okSubscribers"
-                        s.sendall(readyForRecievingSubscribers.encode())
+                        sock.sendall(readyForRecievingSubscribers.encode())
 
                         print("\tReception des subscribers ...")
-                        subscribers = (s.recv(1024)).decode('utf-8')
+                        subscribers = (sock.recv(1024)).decode('utf-8')
 
                         print("\tSubscribers:\n\t\t", subscribers)
                         subscribers = eval(subscribers)
 
-                        s.sendall(self.OkCode.encode()) 
+                        sock.sendall(self.OkCode.encode()) 
+                        sock.close()
 
                         #envoyer le nom du nouveau fichier a chaque subscriber
                 
@@ -111,9 +118,12 @@ ipMaster = sys.argv[1]
 portMaster = int(sys.argv[2])
 publisherName = sys.argv[3]
 command = sys.argv[4]
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#s.connect(("127.0.0.1", 8080))
-s.connect((ipMaster, portMaster))
+
+#comme c'est un programme en boucle lorsque command == '1', il faudra ouvrir et fermer une connexion spéciale pour chaque ajout de fichier
+if command == '0':
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #s.connect(("127.0.0.1", 8080))
+    s.connect((ipMaster, portMaster))
 
 newClient = Publisher(publisherName, command)
 newClient.main()

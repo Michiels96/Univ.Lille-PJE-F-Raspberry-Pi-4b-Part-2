@@ -225,8 +225,8 @@ tcpsock.bind(("",port))
 
 
 while True:
-    tcpsock.listen(10)
     print( "En écoute...")
+    tcpsock.listen(10)
     (clientsocket, (ip, port)) = tcpsock.accept()
     newthread = ClientThread(ip, port, clientsocket)
     newthread.start()
