@@ -187,8 +187,8 @@ class ClientThread(threading.Thread):
             print("\t(", len(publisherSubscriberArray[publisherName]["subscribers"]),") subscribers de <", publisherName, "> -> ", publisherSubscriberArray[publisherName]["subscribers"])
             self.lock.release()
 
-        elif choix == 'newVideo':
-            abc = 'abc'
+        # elif choix == 'newFile':
+        #     abc = 'abc'
 
 
 
