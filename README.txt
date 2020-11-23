@@ -31,4 +31,6 @@ Patterns de commande pour exécuter les fichiers:
         python3 subscriber.py <PORT> <1>
 
 
-    On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8090
+    On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8090.
+    Il est sous-entendu qu'un subscriber ne peut s'inscrire et 
+        écouter les publishers qui publient leur nouvelle video en même temps.
