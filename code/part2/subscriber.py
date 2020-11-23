@@ -5,7 +5,7 @@ import sys
 import os
 import re
 import threading
-
+import json
 
 
 
@@ -16,11 +16,9 @@ class Subscriber():
         self.lock = threading.Lock()
         self.subscriberName = subscriberName
         self.publisherToSubscribeTo = publisherToSubscribeTo
-        #self.command = command
 
     def main(self):
         #inscription au master
-        # if self.command == '0':
         listOption = "inscrSubscriber"
         s.sendall(listOption.encode())
 
@@ -62,18 +60,13 @@ class Subscriber():
         print(display)
         print("\tsubscriber <", self.subscriberName,"> inscrit au Publisher <", self.publisherToSubscribeTo,"> !\n")
 
-        self.lock.acquire()
-        publisherArray[self.publisherToSubscribeTo] = listeFichiers
-        print("ICII ", publisherArray)
-        self.lock.release()
-        
 
-        # elif self.command == '1':
-        #     while True:
-        #         print( "En écoute...")
 
-        # else:
-        #     print("\tErreur, la commande n'est pas valide ou n'a pas été donné\n\n")
+        ##Enregistrer la liste des fichiers dans un fichier
+        #Pas besoin de vérifier si le fichier est déjà ouvert par un autre process 
+        #car subscriber.py ne peut s'exécuter qu'1 fois à la fois (=> 1 thread) sur une machine
+        saveDataIntoPublishersFile(False, self.publisherToSubscribeTo, listeFichiers)
+
 
 class SubscriberServer(threading.Thread):
 
@@ -87,9 +80,7 @@ class SubscriberServer(threading.Thread):
         self.clientsocket = clientsocket
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port))
 
-    def menu(self):
-
-
+    def menu(self, publishersArray):
 
         #nom du publisher
         readyForRecievePublisherName = (self.clientsocket.recv(1024)).decode('utf-8')
@@ -97,14 +88,10 @@ class SubscriberServer(threading.Thread):
             print("\tErreur, le publisher connecté n'est pas prêt à envoyer son nom")
             return 
         self.clientsocket.sendall(self.OkCode.encode())
-
         publisherName = (self.clientsocket.recv(1024)).decode('utf-8')
-        print("publi ", publisherName)
-        
+
         publisherNameRecieved = "okPublisherNameRecieved"
         self.clientsocket.sendall(publisherNameRecieved.encode('utf-8'))
-
-
 
 
         #nom du nouveau fichier
@@ -113,31 +100,64 @@ class SubscriberServer(threading.Thread):
             print("\tErreur, le publisher connecté n'est pas prêt à envoyer le nom du nouveau fichier")
             return 
         self.clientsocket.sendall(self.OkCode.encode())
-
         newFileName = (self.clientsocket.recv(1024)).decode('utf-8')
-
         newFileRecieved = "okNewFileNameRecieved"
         self.clientsocket.sendall(newFileRecieved.encode('utf-8'))
 
+
         self.lock.acquire()
-        print("LABAS ", publisherArray)
-        publisherArray[publisherName].append(newFileRecieved)
-        print("Liste des fichiers du Publisher <", publisherName,"> :")
-        print("\t", publisherArray[publisherName], "\n")
+        publishersArray[publisherName].append(newFileName)
+        print("\tEcriture du nom du nouveau fichier dans le fichier de sauvegarde")
+        saveDataIntoPublishersFile(True, publisherName, publishersArray[publisherName])
+        print("\tFAIT!\n")
+        print("liste des fichiers pour le publisher <", publisherName,">:")
+        print(publishersArray[publisherName])
         self.lock.release()
-        
+    
 
 
     def run(self):
-        print("Connexion de %s %s" % (self.ip, self.port, ))
-        self.menu()
+        print("Connexion de %s %s" % (self.ip, self.port))
+        #récupérer les listes de fichiers des publishers auquel le subscriber est abonné
+        self.lock.acquire()
+        publisherArray = loadDataFromSavedPublishersFile()
+        print("\tDEBUT DU PROGRAMME - LOAD FILE publisherArray.data", publisherArray)
+        self.lock.release()
+        self.menu(publisherArray)
         print("publisher déconnecté...")
+        print("En écoute...")
 
 
 
-publisherArray = {}
 
-#récupérer l'addr ip, le port et les arguments
+
+def loadDataFromSavedPublishersFile():
+    if os.path.exists("publisherArray.data"):
+        file = open("publisherArray.data", "rb")
+        raw_data = file.read()
+        publisherArray = json.loads(raw_data)
+        file.close()
+        return publisherArray
+    else:
+        #normalement il n'ira jamais ici, le fichier est crée dès l'inscription du subscriber
+        publisherArray = {}
+        return publisherArray
+
+def saveDataIntoPublishersFile(publisherAlreadyExists, publisher, fileList):
+    if publisherAlreadyExists:
+        publisherArray = loadDataFromSavedPublishersFile()
+        publisherArray[publisher] = fileList
+    else:
+        publisherArray = {}
+        publisherArray[publisher] = []
+        publisherArray[publisher] = fileList
+
+    data = str(json.dumps(publisherArray))
+    file = open("publisherArray.data", "wb")
+    file.write(data.encode())
+    file.close()
+
+
 
 
 if len(sys.argv) == 6 and sys.argv[5] == '0':
@@ -160,7 +180,7 @@ elif sys.argv[2] == '1':
     tcpsock.bind(("",port))
 
     while True:
-        print( "En écoute...")
+        print("En écoute...")
         tcpsock.listen(10)
         (clientsocket, (ip, port)) = tcpsock.accept()
         newthread = SubscriberServer(ip, port, clientsocket)

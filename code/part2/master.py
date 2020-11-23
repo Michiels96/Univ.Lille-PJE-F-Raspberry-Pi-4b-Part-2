@@ -52,21 +52,18 @@ class ClientThread(threading.Thread):
             #reception de la liste des fichiers déjà existants pour le publisher à inscrire
             listeFichiers = (self.clientsocket.recv(1024)).decode('utf-8')
             listeFichiers = listeFichiers.split("\n")
-            #enlever le dernier \n
+            #pour enlever le dernier '\n'
             listeFichiers.pop()
             self.lock.acquire()
             publisherSubscriberArray[publisherName] = {}
             publisherSubscriberArray[publisherName]["fileList"] = listeFichiers
             publisherSubscriberArray[publisherName]["subscribers"] = {}
-            # publisherSubscriberArray[publisherName]["subscribers"]["sub1"] = "127.0.45.89"
-            # publisherSubscriberArray[publisherName]["subscribers"]["sub2"] = "192.168.1.2"
             self.lock.release()
 
             receptionCode = "inscriptionOk"
             self.clientsocket.sendall(receptionCode.encode('utf-8'))
 
             self.lock.acquire()
-            #print("\t", publisherSubscriberArray)
             print("\tLEN - nombre de fichiers du publisher <", publisherName,">", len(publisherSubscriberArray[publisherName]["fileList"]))
             self.lock.release()
 
@@ -95,13 +92,9 @@ class ClientThread(threading.Thread):
             else:
                 codePublisherInscrit = "okPublisherInscrit"
                 self.clientsocket.sendall(codePublisherInscrit.encode('utf-8'))
-                # OkCode = (self.clientsocket.recv(1024)).decode('utf-8')
-                # if OkCode != "000":
-                #     print("\tCODE ERREUR Nr 001: "+ERROR_ARRAY['001'])
-                #     return
 
-                #ajouter le nom du nouveau fichier dans la liste des fichiers du publisher inscrit
-                #ceci permet aux nouveaux subscribers de recevoir la liste des fichiers du publisher, auxquels ils s'abonnent, à jour
+                #Ajouter le nom du nouveau fichier dans la liste des fichiers du publisher inscrit
+                #Ceci permet aux nouveaux subscribers de recevoir la liste des fichiers du publisher, auxquels ils s'abonnent, à jour
                 self.lock.acquire()
                 publisherSubscriberArray[publisherName]["fileList"].append(newFileName)
                 print("\tLEN - nombre de fichiers du publisher <", publisherName,">", len(publisherSubscriberArray[publisherName]["fileList"]))
@@ -187,14 +180,6 @@ class ClientThread(threading.Thread):
             print("\t(", len(publisherSubscriberArray[publisherName]["subscribers"]),") subscribers de <", publisherName, "> -> ", publisherSubscriberArray[publisherName]["subscribers"])
             self.lock.release()
 
-        # elif choix == 'newFile':
-        #     abc = 'abc'
-
-
-
-
-
-
 
     def checkIfPublisherIsSignedIn(self, publisherName):
         if publisherName in publisherSubscriberArray:
@@ -206,26 +191,28 @@ class ClientThread(threading.Thread):
         if subscriberName in publisherSubscriberArray[publisherName]["subscribers"]:
             return True
         else:
-            #au lieu de re-bloquer une 2eme fois le mutex, on l'inscrit aussi ici
+            #Au lieu de re-bloquer une 2eme fois le mutex, on l'inscrit aussi ici
             publisherSubscriberArray[publisherName]["subscribers"][subscriberName] = str(self.ip)
             return False
 
     def run(self):
-        print("Connexion de %s %s" % (self.ip, self.port, ))
+        print("Connexion de %s %s" % (self.ip, self.port))
         self.menu()
         print("publisher/subscriber déconnecté...")
+        print("En écoute...")
 
 
 
 tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-# "" pour l'HOST permet de recevoir une connexion de n'importe quelle addr IP
+
 port = int(sys.argv[1])
+# "" pour l'HOST permet de recevoir une connexion de n'importe quelle addr IP
 tcpsock.bind(("",port))
 
 
 while True:
-    print( "En écoute...")
+    print("En écoute...")
     tcpsock.listen(10)
     (clientsocket, (ip, port)) = tcpsock.accept()
     newthread = ClientThread(ip, port, clientsocket)

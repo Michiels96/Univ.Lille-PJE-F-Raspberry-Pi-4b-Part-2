@@ -20,6 +20,10 @@ class Publisher():
     def main(self):
         #Inscription au master
         if self.command == '0':
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #s.connect(("127.0.0.1", 8080))
+            s.connect((ipMaster, portMaster))
+
             listOption = "inscrPublisher"
             s.sendall(listOption.encode())
             readyForSendingPublisherName = (s.recv(1024)).decode('utf-8')
@@ -41,6 +45,7 @@ class Publisher():
                         print("\tPublisher <", self.publisherName,"> inscrit!\n\n")
                 else:
                     print(receptionCode, "\n")
+            s.close()
         
         #vérification en continu du dossier record_sample 
         #pour aller alerter les subscribers en cas d'un ajout de fichier dans le dossier record_sample
@@ -110,7 +115,6 @@ class Publisher():
 
                         #envoyer le nom du nouveau fichier a chaque subscriber
                         for sub in subscribers:
-
                             # vérifier si le subscriber est à l'écoute
                             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             #s.connect(("127.0.0.1", 8080)) 
@@ -126,24 +130,22 @@ class Publisher():
                             sock.sendall(readyForSendingPublisherName.encode('utf-8'))
                             OkCode = (sock.recv(1024)).decode('utf-8')
                             if OkCode != "000":
-                                print("\tSubscriber <",sub,"> n'est pas prêt à recevoir publisherName\n")
+                                print("\t\tSubscriber <",sub,"> n'est pas prêt à recevoir publisherName\n")
                                 sock.close()
                                 return
 
                             sock.sendall(self.publisherName.encode())
                             publisherNameRecieved = (sock.recv(1024)).decode('utf-8')
                             if publisherNameRecieved != "okPublisherNameRecieved":
-                                print("\tSubscriber <",sub,"> n'a pas reçu publisherName\n")
+                                print("\t\tSubscriber <",sub,"> n'a pas reçu publisherName\n")
                                 sock.close()
                                 return
-
-
 
                             readyForSendingNewFileName = "okNewFileName"
                             sock.sendall(readyForSendingNewFileName.encode('utf-8'))
                             OkCode = (sock.recv(1024)).decode('utf-8')
                             if OkCode != "000":
-                                print("\tSubscriber <",sub,"> n'est pas prêt à recevoir newFileName\n")
+                                print("\t\tSubscriber <",sub,"> n'est pas prêt à recevoir newFileName\n")
                                 sock.close()
                                 return
 
@@ -153,13 +155,11 @@ class Publisher():
                                 print("\tSubscriber <",sub,"> n'a pas reçu newFileName\n")
                                 sock.close()
                                 return
-                            print("\tSubscriber <", sub,"> a correctement reçu le nom du fichier '",str(f),"'")
+                            print("\t\tSubscriber <", sub,"> a correctement reçu le nom du fichier '",str(f),"'")
 
                             sock.close()
         else:
             print("\tErreur, le dernier argument n'est pas valide ou n'a pas été donné\n\n")
-
-
 
 
 #récupérer l'addr ip, le port et les arguments
@@ -167,12 +167,6 @@ ipMaster = sys.argv[1]
 portMaster = int(sys.argv[2])
 publisherName = sys.argv[3]
 command = sys.argv[4]
-
-#comme c'est un programme en boucle lorsque command == '1', il faudra ouvrir et fermer une connexion spéciale pour chaque ajout de fichier
-if command == '0':
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #s.connect(("127.0.0.1", 8080))
-    s.connect((ipMaster, portMaster))
-
+    
 newClient = Publisher(publisherName, command)
 newClient.main()
