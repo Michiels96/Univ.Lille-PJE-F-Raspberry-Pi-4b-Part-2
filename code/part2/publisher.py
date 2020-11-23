@@ -75,6 +75,7 @@ class Publisher():
                         if readyForSendingPublisherName != "okPublisherName":
                             print("\tMaster n'est pas prêt à recevoir publisherName\n")
                             sock.sendall(self.OkCode.encode())
+                            sock.close()
                             return
                         sock.sendall(self.publisherName.encode())
 
@@ -82,6 +83,7 @@ class Publisher():
                         if readyForSendingNewFileName != "okNewFileName":
                             print("\tMaster n'est pas prêt à recevoir le nom du nouveau fichier\n")
                             sock.sendall(self.OkCode.encode())
+                            sock.close()
                             return
                         sock.sendall(str(f).encode())
 
@@ -89,6 +91,7 @@ class Publisher():
                         if codePublisherInscrit != "okPublisherInscrit":
                             print(codePublisherInscrit, "\n\n")
                             sock.sendall(self.OkCode.encode())
+                            sock.close()
                             return 
 
 
@@ -106,7 +109,53 @@ class Publisher():
                         sock.close()
 
                         #envoyer le nom du nouveau fichier a chaque subscriber
-                
+                        for sub in subscribers:
+
+                            # vérifier si le subscriber est à l'écoute
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            #s.connect(("127.0.0.1", 8080)) 
+                            isAvaible = sock.connect_ex((subscribers[sub], 8090))
+                            if isAvaible != 0:
+                                print("\n\tErreur le subscriber <",sub,"> n'est pas à l'écoute, le nom du nouveau fichier n'a pas pu être transmis!\n")
+                                sock.close()
+                                continue
+
+
+
+                            readyForSendingPublisherName = "okPublisherName"
+                            sock.sendall(readyForSendingPublisherName.encode('utf-8'))
+                            OkCode = (sock.recv(1024)).decode('utf-8')
+                            if OkCode != "000":
+                                print("\tSubscriber <",sub,"> n'est pas prêt à recevoir publisherName\n")
+                                sock.close()
+                                return
+
+                            sock.sendall(self.publisherName.encode())
+                            publisherNameRecieved = (sock.recv(1024)).decode('utf-8')
+                            if publisherNameRecieved != "okPublisherNameRecieved":
+                                print("\tSubscriber <",sub,"> n'a pas reçu publisherName\n")
+                                sock.close()
+                                return
+
+
+
+                            readyForSendingNewFileName = "okNewFileName"
+                            sock.sendall(readyForSendingNewFileName.encode('utf-8'))
+                            OkCode = (sock.recv(1024)).decode('utf-8')
+                            if OkCode != "000":
+                                print("\tSubscriber <",sub,"> n'est pas prêt à recevoir newFileName\n")
+                                sock.close()
+                                return
+
+                            sock.sendall(str(f).encode('utf-8'))
+                            newFileNameCode = (sock.recv(1024)).decode('utf-8')
+                            if newFileNameCode != "okNewFileNameRecieved":
+                                print("\tSubscriber <",sub,"> n'a pas reçu newFileName\n")
+                                sock.close()
+                                return
+                            print("\tSubscriber <", sub,"> a correctement reçu le nom du fichier '",str(f),"'")
+
+                            sock.close()
         else:
             print("\tErreur, le dernier argument n'est pas valide ou n'a pas été donné\n\n")
 

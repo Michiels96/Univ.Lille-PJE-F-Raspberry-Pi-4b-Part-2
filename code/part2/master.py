@@ -166,7 +166,7 @@ class ClientThread(threading.Thread):
                 print("\tCODE ERREUR Nr 002: "+ERROR_ARRAY['002'])
                 return
 
-            #envois de la liste des fichiers du subscriber abonné
+            #envois de la liste des fichiers du publisher abonné
             readyForRecievePublisherFileList = "okPublisherFileList"
             self.clientsocket.sendall(readyForRecievePublisherFileList.encode('utf-8'))
             OkCode = (self.clientsocket.recv(1024)).decode('utf-8')

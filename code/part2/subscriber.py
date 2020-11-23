@@ -6,10 +6,14 @@ import os
 import re
 import threading
 
+
+
+
 class Subscriber():
 
     def __init__(self, subscriberName, publisherToSubscribeTo):
         self.OkCode = "000"
+        self.lock = threading.Lock()
         self.subscriberName = subscriberName
         self.publisherToSubscribeTo = publisherToSubscribeTo
         #self.command = command
@@ -58,25 +62,70 @@ class Subscriber():
         print(display)
         print("\tsubscriber <", self.subscriberName,"> inscrit au Publisher <", self.publisherToSubscribeTo,"> !\n")
 
+        self.lock.acquire()
+        publisherArray[self.publisherToSubscribeTo] = listeFichiers
+        print("ICII ", publisherArray)
+        self.lock.release()
+        
+
         # elif self.command == '1':
         #     while True:
         #         print( "En écoute...")
 
-        else:
-            print("\tErreur, la commande n'est pas valide ou n'a pas été donné\n\n")
+        # else:
+        #     print("\tErreur, la commande n'est pas valide ou n'a pas été donné\n\n")
 
 class SubscriberServer(threading.Thread):
 
     def __init__(self, ip, port, clientsocket):
 
         threading.Thread.__init__(self)
+        self.OkCode = "000"
         self.lock = threading.Lock()
         self.ip = ip
         self.port = port
         self.clientsocket = clientsocket
-        print("[+] Nouveau thread pour %s %s" % (self.ip, self.port, ))
+        print("[+] Nouveau thread pour %s %s" % (self.ip, self.port))
 
-    def menu():
+    def menu(self):
+
+
+
+        #nom du publisher
+        readyForRecievePublisherName = (self.clientsocket.recv(1024)).decode('utf-8')
+        if readyForRecievePublisherName != 'okPublisherName':
+            print("\tErreur, le publisher connecté n'est pas prêt à envoyer son nom")
+            return 
+        self.clientsocket.sendall(self.OkCode.encode())
+
+        publisherName = (self.clientsocket.recv(1024)).decode('utf-8')
+        print("publi ", publisherName)
+        
+        publisherNameRecieved = "okPublisherNameRecieved"
+        self.clientsocket.sendall(publisherNameRecieved.encode('utf-8'))
+
+
+
+
+        #nom du nouveau fichier
+        readyForRecieveNewFileName = (self.clientsocket.recv(1024)).decode('utf-8')
+        if readyForRecieveNewFileName != 'okNewFileName':
+            print("\tErreur, le publisher connecté n'est pas prêt à envoyer le nom du nouveau fichier")
+            return 
+        self.clientsocket.sendall(self.OkCode.encode())
+
+        newFileName = (self.clientsocket.recv(1024)).decode('utf-8')
+
+        newFileRecieved = "okNewFileNameRecieved"
+        self.clientsocket.sendall(newFileRecieved.encode('utf-8'))
+
+        self.lock.acquire()
+        print("LABAS ", publisherArray)
+        publisherArray[publisherName].append(newFileRecieved)
+        print("Liste des fichiers du Publisher <", publisherName,"> :")
+        print("\t", publisherArray[publisherName], "\n")
+        self.lock.release()
+        
 
 
     def run(self):
@@ -84,10 +133,14 @@ class SubscriberServer(threading.Thread):
         self.menu()
         print("publisher déconnecté...")
 
+
+
+publisherArray = {}
+
 #récupérer l'addr ip, le port et les arguments
 
 
-if len(sys.argv) == 6:
+if len(sys.argv) == 6 and sys.argv[5] == '0':
     ipMaster = sys.argv[1]
     portMaster = int(sys.argv[2])
     subscriberName = sys.argv[3]
@@ -96,16 +149,10 @@ if len(sys.argv) == 6:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #s.connect(("127.0.0.1", 8080))
     s.connect((ipMaster, portMaster))
-    newClient = Subscriber(subscriberName, publisherToSubscribeTo, command)
+    newClient = Subscriber(subscriberName, publisherToSubscribeTo)
     newClient.main()
-else:
-    # subscriberName = 'null'
-    # publisherToSubscribeTo = 'null'
-    # command = sys.argv[3]
-    # s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # #s.connect(("127.0.0.1", 8080))
-    # s.connect((ipMaster, portMaster))
 
+elif sys.argv[2] == '1':
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
