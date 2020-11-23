@@ -29,3 +29,6 @@ Patterns de commande pour exécuter les fichiers:
         python3 subscriber.py <IpDuMaster> <PortDuMaster> <NomDuSubscriber> <NomDuPublisher> <0>
     Pour rester en écoute aux publishers auquel le subscriber est inscrit:
         python3 subscriber.py <PORT> <1>
+
+
+    On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8080
