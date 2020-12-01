@@ -25,7 +25,7 @@ Patterns de commande pour exécuter les fichiers:
     Pour alerter tous ses subscribers:
         python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <1>
 - subscriber.py
-    Pour s'inscrire au master et être ensuite à l'écoute des subscribers connectés:
+    Pour s'inscrire au master et être ensuite à l'écoute des publishers connectés:
         python3 subscriber.py <IpDuMaster> <PortDuMaster> <NomDuSubscriber> <NomDuPublisher1> <NomDuPublisher2> <NomDuPublisher3> etc.
 
     On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8090.
