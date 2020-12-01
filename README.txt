@@ -31,4 +31,4 @@ Patterns de commande pour exécuter les fichiers:
     On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8090.
 
     Il est sous-entendu qu'un seul subscriber ne peut s'exécuter que sur une machine à la fois
-    car le port 8090 ne peut etre utilisé que par 1 subscriber à la fois.
+    car le port 8090 ne peut être utilisé que par 1 subscriber à la fois.
