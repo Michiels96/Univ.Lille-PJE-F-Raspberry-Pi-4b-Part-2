@@ -25,12 +25,10 @@ Patterns de commande pour exécuter les fichiers:
     Pour alerter tous ses subscribers:
         python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <1>
 - subscriber.py
-    Pour s'inscrire au master:
-        python3 subscriber.py <IpDuMaster> <PortDuMaster> <NomDuSubscriber> <NomDuPublisher> <0>
-    Pour rester en écoute aux publishers auquel le subscriber est inscrit:
-        python3 subscriber.py <PORT> <1>
-
+    Pour s'inscrire au master et être ensuite à l'écoute des subscribers connectés:
+        python3 subscriber.py <IpDuMaster> <PortDuMaster> <NomDuSubscriber> <NomDuPublisher1> <NomDuPublisher2> <NomDuPublisher3> etc.
 
     On a décidé que chaque subscriber, lorsqu'il est en mode serveur, que son port sera 8090.
-    Il est sous-entendu qu'un subscriber ne peut s'inscrire et 
-        écouter les publishers qui publient leur nouvelle video en même temps.
+
+    Il est sous-entendu qu'un seul subscriber ne peut s'exécuter que sur une machine à la fois
+    car le port 8090 ne peut etre utilisé que par 1 subscriber à la fois.

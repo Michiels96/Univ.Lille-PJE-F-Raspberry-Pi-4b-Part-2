@@ -7,65 +7,74 @@ import re
 import threading
 import json
 
+publishersArray = {}
 
+class SubscriberSignIn():
 
-class Subscriber():
-
-    def __init__(self, subscriberName, publisherToSubscribeTo):
+    def __init__(self, ipMaster, portMaster, subscriberName, publishersToSubscribeTo):
         self.OkCode = "000"
         self.lock = threading.Lock()
+        self.ipMaster = ipMaster
+        self.portMaster = portMaster
         self.subscriberName = subscriberName
-        self.publisherToSubscribeTo = publisherToSubscribeTo
+        self.publishersToSubscribeTo = publishersToSubscribeTo
 
     def main(self):
         #inscription au master
-        listOption = "inscrSubscriber"
-        s.sendall(listOption.encode())
+        for publisherToSubscribeTo in publishersToSubscribeTo:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((self.ipMaster, self.portMaster))
 
-        readyForSendingPublisherName = (s.recv(1024)).decode('utf-8')
-        if readyForSendingPublisherName != "okPublisherName":
-            print("\tMaster n'est pas prêt à recevoir publisherName\n\n")
-            return
-        s.sendall(self.publisherToSubscribeTo.encode())
 
-        
-        
-        readyForSendingSubscriberName = (s.recv(1024)).decode('utf-8')
-        if readyForSendingSubscriberName != "okSubscriberName":
-            print(readyForSendingSubscriberName, "\n\n")
-            return
-        s.sendall(self.subscriberName.encode())
+            listOption = "inscrSubscriber"
+            s.sendall(listOption.encode())
 
-        codeSubscriberSignedIn = (s.recv(1024)).decode('utf-8')
-        if codeSubscriberSignedIn != "okSubscriberSignedIn":
-            print(codeSubscriberSignedIn,"\n\n")
+            readyForSendingPublisherName = (s.recv(1024)).decode('utf-8')
+            if readyForSendingPublisherName != "okPublisherName":
+                print("\tMaster n'est pas prêt à recevoir publisherName\n\n")
+                return False
+            s.sendall(publisherToSubscribeTo.encode())
+
+            
+            
+            readyForSendingSubscriberName = (s.recv(1024)).decode('utf-8')
+            if readyForSendingSubscriberName != "okSubscriberName":
+                print(readyForSendingSubscriberName, "\n\n")
+                return
+            s.sendall(self.subscriberName.encode())
+
+            codeSubscriberSignedIn = (s.recv(1024)).decode('utf-8')
+            if codeSubscriberSignedIn != "okSubscriberSignedIn":
+                print(codeSubscriberSignedIn,"\n\n")
+                s.sendall(self.OkCode.encode())
+                return False
             s.sendall(self.OkCode.encode())
-            return
-        s.sendall(self.OkCode.encode())
 
-        readyForRecievePublisherFileList = (s.recv(1024)).decode('utf-8')
-        if readyForRecievePublisherFileList != "okPublisherFileList":
-            print("\tErreur, le master n'est pas prêt à envoyer la liste des fichiers du publisher abonné.")
+            readyForRecievePublisherFileList = (s.recv(1024)).decode('utf-8')
+            if readyForRecievePublisherFileList != "okPublisherFileList":
+                print("\tErreur, le master n'est pas prêt à envoyer la liste des fichiers du publisher abonné.")
+                s.sendall(self.OkCode.encode())
+                return False
             s.sendall(self.OkCode.encode())
-            return
-        s.sendall(self.OkCode.encode())
 
-        listeFichiers = (s.recv(1024)).decode('utf-8')
-        s.sendall(self.OkCode.encode())
-        print("Liste des fichiers du Publisher <", self.publisherToSubscribeTo,"> :")
-        listeFichiers = re.search("'(.+)'", listeFichiers).group(1).split("', '")
-        display = ''
-        for i in listeFichiers:
-            display += "\t"+i+"\n"
-        print(display)
-        print("\tsubscriber <", self.subscriberName,"> inscrit au Publisher <", self.publisherToSubscribeTo,"> !\n")
+            listeFichiers = (s.recv(1024)).decode('utf-8')
+            s.sendall(self.OkCode.encode())
+            print("Liste des fichiers du Publisher <", publisherToSubscribeTo,"> :")
+            listeFichiers = re.search("'(.+)'", listeFichiers).group(1).split("', '")
+            display = ''
+            for i in listeFichiers:
+                display += "\t"+i+"\n"
+            print(display)
+            print("\tsubscriber <", self.subscriberName,"> inscrit au Publisher <", publisherToSubscribeTo,"> !\n")
 
 
+            self.lock.acquire()
+            publishersArray[publisherToSubscribeTo] = []
+            publishersArray[publisherToSubscribeTo] = listeFichiers
+            self.lock.release()
 
-        ##Enregistrer la liste des fichiers dans un fichier
-        #Pas besoin de vérifier si le fichier est déjà ouvert par un autre process 
-        #car subscriber.py ne peut s'exécuter qu'1 fois à la fois (=> 1 thread) sur une machine
-        saveDataIntoPublishersFile(False, self.publisherToSubscribeTo, listeFichiers)
+            s.close()
+        return True
 
 
 class SubscriberServer(threading.Thread):
@@ -80,7 +89,7 @@ class SubscriberServer(threading.Thread):
         self.clientsocket = clientsocket
         print("[+] Nouveau thread pour %s %s" % (self.ip, self.port))
 
-    def menu(self, publishersArray):
+    def menu(self):
 
         #nom du publisher
         readyForRecievePublisherName = (self.clientsocket.recv(1024)).decode('utf-8')
@@ -107,8 +116,8 @@ class SubscriberServer(threading.Thread):
 
         self.lock.acquire()
         publishersArray[publisherName].append(newFileName)
-        print("\tEcriture du nom du nouveau fichier dans le fichier de sauvegarde")
-        saveDataIntoPublishersFile(True, publisherName, publishersArray[publisherName])
+        print("\tEcriture du nom du nouveau fichier dans la SD publishersArray")
+        #saveDataIntoPublishersFile(True, publisherName, publishersArray[publisherName])
         print("\tFAIT!\n")
         print("liste des fichiers pour le publisher <", publisherName,">:")
         print(publishersArray[publisherName])
@@ -120,67 +129,48 @@ class SubscriberServer(threading.Thread):
         print("Connexion de %s %s" % (self.ip, self.port))
         #récupérer les listes de fichiers des publishers auquel le subscriber est abonné
         self.lock.acquire()
-        publisherArray = loadDataFromSavedPublishersFile()
-        print("\tDEBUT DU PROGRAMME - LOAD FILE publisherArray.data", publisherArray)
+        print("\tDEBUT DU PROGRAMME - LOAD SD publishersArray", publishersArray)
         self.lock.release()
-        self.menu(publisherArray)
+        self.menu()
         print("publisher déconnecté...")
-        print("En écoute...")
+        print("\n\nEn écoute...")
 
 
 
 
 
-def loadDataFromSavedPublishersFile():
-    if os.path.exists("publisherArray.data"):
-        file = open("publisherArray.data", "rb")
-        raw_data = file.read()
-        publisherArray = json.loads(raw_data)
-        file.close()
-        return publisherArray
-    else:
-        #normalement il n'ira jamais ici, le fichier est crée dès l'inscription du subscriber
-        publisherArray = {}
-        return publisherArray
+ipMaster = sys.argv[1]
+portMaster = int(sys.argv[2])
+subscriberName = sys.argv[3]
 
-def saveDataIntoPublishersFile(publisherAlreadyExists, publisher, fileList):
-    if publisherAlreadyExists:
-        publisherArray = loadDataFromSavedPublishersFile()
-        publisherArray[publisher] = fileList
-    else:
-        publisherArray = {}
-        publisherArray[publisher] = []
-        publisherArray[publisher] = fileList
+#récupérer tous les publishers auquel le subscriber veut s'y abonner
+publishersToSubscribeTo = []
+for i in range(4, len(sys.argv)):
+    publishersToSubscribeTo.append(sys.argv[i])
 
-    data = str(json.dumps(publisherArray))
-    file = open("publisherArray.data", "wb")
-    file.write(data.encode())
-    file.close()
-
-
-
-
-if len(sys.argv) == 6 and sys.argv[5] == '0':
-    ipMaster = sys.argv[1]
-    portMaster = int(sys.argv[2])
-    subscriberName = sys.argv[3]
-    publisherToSubscribeTo = sys.argv[4]
-    
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #s.connect(("127.0.0.1", 8080))
-    s.connect((ipMaster, portMaster))
-    newClient = Subscriber(subscriberName, publisherToSubscribeTo)
-    newClient.main()
-
-elif sys.argv[2] == '1':
     tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        tcpsock.bind(("",8090))
+        tcpsock.close()
+    except OSError:
+        print("\n\tErreur, un subscriber tourne déjà sur cette machine\n")
+        sys.exit()
 
-    port = int(sys.argv[1])
-    tcpsock.bind(("",port))
+
+#Phase 1: inscription du subscriber au master
+newClient = SubscriberSignIn(ipMaster, portMaster, subscriberName, publishersToSubscribeTo)
+continueCode = newClient.main()
+
+
+if continueCode:
+    #Phase 2: écoute de tous les publishers
+    tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    tcpsock.bind(("",8090))
 
     while True:
-        print("En écoute...")
+        print("Mode serveur\n\tEn écoute...")
         tcpsock.listen(10)
         (clientsocket, (ip, port)) = tcpsock.accept()
         newthread = SubscriberServer(ip, port, clientsocket)
