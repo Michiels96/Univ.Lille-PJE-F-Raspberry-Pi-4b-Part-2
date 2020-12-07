@@ -19,7 +19,7 @@ Partie 2 (code/part2)
 Patterns de commande pour exécuter les fichiers:
 - master.py
     python3 master.py <PORT>
-- publisher.py 
+- publisher.py
     Pour s'inscrire au master:
         python3 publisher.py <IpDuMaster> <PortDuMaster> <NomDuPublisher> <0>
     Pour alerter tous ses subscribers:
@@ -34,4 +34,19 @@ Patterns de commande pour exécuter les fichiers:
     car le port 8090 ne peut être utilisé que par 1 subscriber à la fois.
 
 Partie 3 (libfuse)
+Patterns similaire à la partie 1
+readClient.py devient readClientFs.py
+closeClient.py devient closeClientFs.py
 
+- server.py
+    python3 server.py <PORT>
+- openClient.py:
+    python3 openClient.py <IP> <PORT> <filename>
+- readClientFs.py:
+    python3 readClient.py <IP> <PORT>
+- closeClientFs.py:
+    python3 closeClient.py <IP> <PORT>
+- listClient:
+    python3 listClient.py <IP> <PORT>
+- statClient.py:
+    python3 statClient.py <IP> <PORT> <filename>
