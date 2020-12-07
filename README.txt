@@ -32,3 +32,6 @@ Patterns de commande pour exécuter les fichiers:
 
     Il est sous-entendu qu'un seul subscriber ne peut s'exécuter que sur une machine à la fois
     car le port 8090 ne peut être utilisé que par 1 subscriber à la fois.
+
+Partie 3 (libfuse)
+
