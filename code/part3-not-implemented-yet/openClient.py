@@ -4,7 +4,7 @@ import socket
 import re
 import sys
 
-# path à utiliser pour le raspberry pi 
+# path à utiliser pour le raspberry pi
 #VIDEO_PATH = "/media/usb0/record/"
 VIDEO_PATH = "/root/record_sample/"
 
@@ -12,8 +12,8 @@ VIDEO_PATH = "/root/record_sample/"
 class Client():
 
     def __init__(self, filename):
-        ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
-        ## ceci permet d'avoir une architecture synchrone 
+        ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé,
+        ## ceci permet d'avoir une architecture synchrone
         self.OkCode = "000"
         self.argFilenameToOpen = filename
 
