@@ -47,9 +47,9 @@ log = logging.getLogger(__name__)
 class ClientFs(pyfuse3.Operations):
     def __init__(self, name, data):
         super(ClientFs, self).__init__()
-        self.file_name = name.encode('utf-8') # nom fichier en binaire
+        self.file_name = name # nom fichier en binaire
         self.file_inode = pyfuse3.ROOT_INODE+1
-        self.file_data = data.encode('utf-8') # contenue du fichier en binaire
+        self.file_data = data # contenue du fichier en binaire
 
     async def getattr(self, inode, ctx=None):
         entry = pyfuse3.EntryAttributes()

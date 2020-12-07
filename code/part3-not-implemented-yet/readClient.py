@@ -3,7 +3,7 @@
 import socket
 import sys
 
-# path à utiliser pour le raspberry pi 
+# path à utiliser pour le raspberry pi
 #VIDEO_PATH = "/media/usb0/record/"
 VIDEO_PATH = "/root/record_sample/"
 
@@ -11,8 +11,8 @@ VIDEO_PATH = "/root/record_sample/"
 class Client():
 
     def __init__(self):
-        ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé, 
-        ## ceci permet d'avoir une architecture synchrone 
+        ## cette variable transmet la valeur '000' au serveur pour lui indiquer que le client a bien reçu ce que le serveur lui a envoyé,
+        ## ceci permet d'avoir une architecture synchrone
         self.OkCode = "000"
 
     def readCommandResponse(self):
@@ -54,10 +54,9 @@ class Client():
             except:
                 print("\tErreur, saisie incorrecte! recommencez")
                 continue
-        with open(VIDEO_PATH+"copy-"+fileNameSaved, 'wb') as fileOpenedId:
-            fileOpenedId.write(buffer)
+        subprocess.run(["python3", "clientFs.py", fileNameSaved.encode('utf-8'), buffer, "fuseDir"]) # lance le script clientFs pour créer le système de fichier dans le dossier fuseDir
         s.sendall(self.OkCode.encode())
-        print("\tFichier '", fileNameSaved,"' écrit!\n\n")
+        print("\tSystème de fichier '", fileNameSaved,"' monté \n\n")
 
     def main(self):
         listOption = "2"
