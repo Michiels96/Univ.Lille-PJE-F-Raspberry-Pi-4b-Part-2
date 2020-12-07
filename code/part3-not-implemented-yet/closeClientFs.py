@@ -36,8 +36,8 @@ class Client():
 
         if serverResponse == "Ok3":
             s.sendall(self.OkCode.encode())
-            self.closeCommandResponse()
             subprocess.run(["fusermount", "-u", "fuseDir"]) #unmount the files
+            self.closeCommandResponse()
         else:
             #erreur reçue du serveur
             print(serverResponse,"\n")

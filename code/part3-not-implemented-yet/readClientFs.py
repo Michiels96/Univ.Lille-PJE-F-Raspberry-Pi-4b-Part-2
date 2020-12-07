@@ -2,6 +2,7 @@
 
 import socket
 import sys
+import subprocess
 
 # path à utiliser pour le raspberry pi
 #VIDEO_PATH = "/media/usb0/record/"
@@ -54,7 +55,7 @@ class Client():
             except:
                 print("\tErreur, saisie incorrecte! recommencez")
                 continue
-        subprocess.run(["python3", "clientFs.py", fileNameSaved.encode('utf-8'), buffer, "fuseDir"]) # lance le script clientFs pour créer le système de fichier dans le dossier fuseDir
+        subprocess.Popen(["python3", "clientFs.py", fileNameSaved, buffer, "fuseDir"]) # lance le script clientFs pour créer le système de fichier dans le dossier fuseDir
         s.sendall(self.OkCode.encode())
         print("\tSystème de fichier '", fileNameSaved,"' monté \n\n")
 
